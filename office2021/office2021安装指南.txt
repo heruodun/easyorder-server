@@ -1,0 +1,8 @@
+1【安装前注意事项】
+
+1.1 在安装过程中需要断开网络连接，否则可能导致安装失败。
+1.2 安装之前请先关闭杀毒软件，如360安全卫士和Windows 10自带的Windows Defender的实时防护功能，以避免误杀KMS工具，导致安装失败。
+1.3 Office 2021仅适用于64位的Windows 10/11系统。
+1.4 在安装Office 2021之前，需要先卸载之前安装的所有Office软件，包括Visio和Project等。
+
+2 安装过程 https://mp.weixin.qq.com/s/9OUnP9uahO2eqgRRAcpUzQ 安装成功后再联网

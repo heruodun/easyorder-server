@@ -1,0 +1,122 @@
+1 打单服务器的打包程序
+
+前置需要安装
+pyinstaller --onefile --icon=logo_icon.ico --windowed --add-data "icon.png;." server.py
+
+
+
+2 设置开机启动
+Windows注册表 通过修改Windows注册表也可以设置开机启动项，但这需要谨慎行事，因为错误的修改可能会导致系统不稳定。
+打开运行对话框（Win键 + R），输入regedit，然后按Enter键打开注册表编辑器。
+导航到HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run。
+右键单击Run文件夹，选择“新建” → “字符串值”。
+命名新的字符串值并双击它。
+在“值数据”字段中输入程序的完整路径，例如C:\Program Files\YourApp\YourApp.exe。
+
+
+
+
+1的详细如下：
+
+
+如果你希望将Python Web服务应用程序打包成Windows上的exe文件，并且可以在后台运行同时在系统托盘中显示状态图标，你可以按照以下步骤进行：
+步骤 1：准备你的Python应用程序
+首先，确保你的Web服务（如使用Flask框架）能够正常运行。你的Python脚本文件可能叫做app.py。
+步骤 2：添加系统托盘图标支持
+要让你的应用程序在系统托盘中显示图标，你需要使用额外的库来创建GUI元素，如PyQt5。你可以通过以下命令安装PyQt5：
+
+1pip install PyQt5
+然后，修改你的Python脚本以创建一个系统托盘图标。以下是简单的托盘图标示例代码：
+
+1import sys
+2from PyQt5.QtWidgets import QApplication, QSystemTrayIcon, QMenu
+3from PyQt5.QtGui import QIcon
+4from flask import Flask
+5from threading import Thread
+6
+7app = Flask(__name__)
+8
+9@app.route('/')
+10def home():
+11    return "Hello, World!"
+12
+13def start_flask_app():
+14    app.run(port=5000)
+15
+16def main():
+17    app = QApplication([])
+18    tray_icon = QSystemTrayIcon(QIcon("path/to/your/icon.png"), app)
+19    menu = QMenu()
+20    exit_action = menu.addAction("Exit")
+21    tray_icon.setContextMenu(menu)
+22    exit_action.triggered.connect(app.quit)
+23    tray_icon.show()
+24
+25    flask_thread = Thread(target=start_flask_app)
+26    flask_thread.daemon = True
+27    flask_thread.start()
+28
+29    sys.exit(app.exec_())
+30
+31if __name__ == "__main__":
+32    main()
+确保你在脚本的同一文件夹中有一个图标文件，比如icon.png。
+步骤 3：安装PyInstaller
+安装PyInstaller，这是一个可以将Python脚本打包成独立可执行文件的工具：
+
+1pip install pyinstaller
+步骤 4：使用PyInstaller来打包你的应用
+通过命令行界面，在你的脚本所在文件夹下运行以下PyInstaller命令来创建exe文件：
+
+1pyinstaller --onefile --windowed --add-data "path/to/your/icon.png;." app.py
+这个命令会创建一个单文件的exe，并且不会出现命令行窗口。
+* 		--onefile 表示打包成一个exe文件。
+* 		--windowed 表示程序在“窗口模式”下运行，没有黑色控制台窗口。
+* 		--add-data 参数用于将非Python文件（如图标文件）包含到打包的exe中。
+步骤 5：运行和分发exe文件
+PyInstaller将在dist文件夹中创建exe文件，你可以从这里运行它。如果一切正常，启动exe文件后，你的Flask服务器应该开始运行，并且你应该在系统托盘中看到你的应用图标。
+现在，你的Python应用就打包成了Windows可执行文件，你可以像普通Windows程序一样运行和分发它。
+请注意，确保仔细测试打包后的应用程序，以确保其功能完整且没有漏洞。此外，显示隐藏的后台进程可能会导致用户感到困惑，所以在实际环境中，建议加入用户界面元素或文档来提供进程信息和控制方式。
+
+pip install PyQt5
+
+import sys
+from PyQt5.QtWidgets import QApplication, QSystemTrayIcon, QMenu
+from PyQt5.QtGui import QIcon
+from flask import Flask
+from threading import Thread
+
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "Hello, World!"
+
+def start_flask_app():
+    app.run(port=5000)
+
+def main():
+    app = QApplication([])
+    tray_icon = QSystemTrayIcon(QIcon("path/to/your/icon.png"), app)
+    menu = QMenu()
+    exit_action = menu.addAction("Exit")
+    tray_icon.setContextMenu(menu)
+    exit_action.triggered.connect(app.quit)
+    tray_icon.show()
+
+    flask_thread = Thread(target=start_flask_app)
+    flask_thread.daemon = True
+    flask_thread.start()
+
+    sys.exit(app.exec_())
+
+if __name__ == "__main__":
+    main()
+
+pip install pyinstaller
+
+
+pyinstaller --onefile --windowed --add-data "path/to/your/icon.png;." app.py
+
+
+托盘图标大小 16×16像素
