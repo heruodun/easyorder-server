@@ -111,10 +111,90 @@ def call_remote_service_async(data):
         app.logger.error("Insert one order to feishu async %s times fail %s", count, data)
 
 
+def get_str_from_excel(excel_str):
+    result_str = ""
+    if excel_str is not None:
+        result_str = str(excel_str).strip()
+    return result_str
+
+
+def order_post_data(A12_F26):
+    # 地址数据
+    dizhi = A12_F26[0][1]
+    # 创单人员
+    man = A12_F26[14][1]
+    # 总条数
+    total_count = A12_F26[12][1]
+    # 长度数据
+    # 条数数据
+
+    str_l_d = ""
+    # 规格数据
+    guige = ""
+    # 备注数据
+    beizhu = ""
+
+    for i in range(0, 9):
+        length = get_str_from_excel(A12_F26[i + 3][2])
+        count = get_str_from_excel(A12_F26[i + 3][4])
+        guige = guige + get_str_from_excel(A12_F26[i + 3][0])
+        beizhu = beizhu + get_str_from_excel(A12_F26[i + 3][5])
+
+        # 如果两个都为空，则跳过当前循环
+        if length == "" and count == "":
+            continue
+        # 如果length为空，则将length置为0
+        if length == "":
+            length = 0
+        # 如果count为空，则将count置为0
+        if count == "":
+            count = 0
+
+        # 如果length是整数，则去掉小数部分
+        if isinstance(length, float) and length.is_integer():
+            length_str = str(int(length))
+        else:
+            length_str = str(length)
+
+        # 如果count是整数，则去掉小数部分
+        if isinstance(count, float) and count.is_integer():
+            count_str = str(int(count))
+        else:
+            count_str = str(count)
+        str_l_d += length_str + " x " + count_str + "，"
+    str_l_d = str_l_d[:-1]
+
+    # 如果total_count是整数，则去掉小数部分
+    if isinstance(total_count, float) and total_count.is_integer():
+        total_count_str = str(int(total_count))
+    else:
+        total_count_str = str(total_count)
+
+    if man is None:
+        man = ""
+    if dizhi is None:
+        dizhi = ""
+    if guige is None:
+        guige = ""
+    if total_count_str is None:
+        total_count_str = ""
+    if beizhu is None:
+        beizhu = ""
+
+    new_record_data = {
+        "printer": man,
+        "address": dizhi,
+        "content": "规格：" + str(
+            guige) + "\n\n长度和条数：" + str_l_d + "\n\n总条数：" + total_count_str + "\n\n备注：" + str(beizhu)
+    }
+    return new_record_data
+
+
 def orders():
     if request.method == 'POST':
         db = server_db.get_db()
-    data = request.get_json()
+    a12_f26 = request.get_json()["data"]
+    data = order_post_data(a12_f26)
     if not data:
         return jsonify({"error": "Missing data in JSON payload"}), 400
     try:
@@ -260,7 +340,8 @@ def main():
     if server_env is None:
         # sys.exit("错误：环境变量 " + constants.SERVER_ENV_KEY + " 未配置，请设置后再运行程序。")
         app = QApplication(sys.argv)
-        QMessageBox.critical(None, "环境变量错误", "错误：环境变量 " + constants.SERVER_ENV_KEY + " 未配置，请设置后再运行程序。")
+        QMessageBox.critical(None, "环境变量错误",
+                             "错误：环境变量 " + constants.SERVER_ENV_KEY + " 未配置，请设置后再运行程序。")
         sys.exit(1)
 
     app = QApplication([])

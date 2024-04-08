@@ -58,8 +58,12 @@ def scheduled_job1_insert_feishu(db):
     # 将时间转换为毫秒时间戳
     # datetime.timestamp() 返回的是秒为单位的时间戳，所以乘以1000转换为毫秒，并将结果转换成整数
     time_stamp_30_days_ago_in_millis = int(thirty_days_ago.timestamp() * 1000)
+
     # 30秒前的毫秒时间戳 因为要避免和插入操作同时插入到飞书
     time_stamp_30_seconds_ago_in_millis = int((now.timestamp() - 30) * 1000)
+
+    app.logger.info("scheduled_job1_insert_feishu job " + str(time_stamp_30_seconds_ago_in_millis) + " "
+                    + str(time_stamp_30_days_ago_in_millis))
 
     order_ids = server_db.get_order_ids_by_status(db, constants.LOCAL_DATA_INIT, time_stamp_30_days_ago_in_millis
                                                   , time_stamp_30_seconds_ago_in_millis)

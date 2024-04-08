@@ -38,4 +38,4 @@ def get_feishu_table():
     elif os.getenv('ORDER_EASY_SERVER_ENV') == 'test':
         return FEISHU_TABLE_NAME_TEST
     else:
-        return None
+        return ""

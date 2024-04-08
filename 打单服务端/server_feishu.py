@@ -3,7 +3,6 @@ import constants
 from server import app
 
 
-
 def get_tenant_access_token(app_id, app_secret):
     url_tat = "https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal/"
     post_data = {
@@ -18,8 +17,11 @@ def do_write_one_record(record_data):
     app_id = "cli_a57140de9afb5013"
     app_secret = "tFYILUQVlsT7U4jDctg7VdwZWIMZYXbs"
     tenant_access_token = get_tenant_access_token(app_id, app_secret)
+
+    feishu_table = constants.get_feishu_table()
+
     url_write = ("https://open.feishu.cn/open-apis/bitable/v1/apps/SF79bwJc6awjy5sRrQAcSTzNn9L/tables/"
-                 + constants.FEISHU_TABLE_NAME_ONLINE + "/records")
+                 + feishu_table + "/records")
     header = {
         "content-type": "application/json",
         "Authorization": f"Bearer {tenant_access_token}"
@@ -51,13 +53,14 @@ def write_one_record(data):
         return ok
 
 
-
 def read_records():
     app_id = "cli_a57140de9afb5013"
     app_secret = "tFYILUQVlsT7U4jDctg7VdwZWIMZYXbs"
     tenant_access_token = get_tenant_access_token(app_id, app_secret)
+    feishu_table = constants.get_feishu_table()
+
     url = ("https://open.feishu.cn/open-apis/bitable/v1/apps/SF79bwJc6awjy5sRrQAcSTzNn9L/tables/"
-           + constants.FEISHU_TABLE_NAME_ONLINE + "/records/search")
+           + feishu_table + "/records/search")
     header = {
         "content-type": "application/json",
         "Authorization": f"Bearer {tenant_access_token}"
@@ -74,8 +77,11 @@ def read_records_by_order_ids(order_ids):
     app_id = "cli_a57140de9afb5013"
     app_secret = "tFYILUQVlsT7U4jDctg7VdwZWIMZYXbs"
     tenant_access_token = get_tenant_access_token(app_id, app_secret)
+
+    feishu_table = constants.get_feishu_table()
+
     url = ("https://open.feishu.cn/open-apis/bitable/v1/apps/SF79bwJc6awjy5sRrQAcSTzNn9L/tables/"
-           + constants.FEISHU_TABLE_NAME_ONLINE + "/records/search")
+           + feishu_table + "/records/search")
     header = {
         "content-type": "application/json",
         "Authorization": f"Bearer {tenant_access_token}"
@@ -97,8 +103,9 @@ def delete_records(record_ids):
     app_id = "cli_a57140de9afb5013"
     app_secret = "tFYILUQVlsT7U4jDctg7VdwZWIMZYXbs"
     tenant_access_token = get_tenant_access_token(app_id, app_secret)
+    feishu_table = constants.get_feishu_table()
     url = ("https://open.feishu.cn/open-apis/bitable/v1/apps/SF79bwJc6awjy5sRrQAcSTzNn9L/tables/"
-           + constants.FEISHU_TABLE_NAME_ONLINE + "/records/batch_delete")
+           + feishu_table + "/records/batch_delete")
     header = {
         "content-type": "application/json",
         "Authorization": f"Bearer {tenant_access_token}"
