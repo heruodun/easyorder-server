@@ -5,7 +5,7 @@ import threading
 from logging.handlers import TimedRotatingFileHandler
 
 from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import QApplication, QSystemTrayIcon, QMenu
+from PyQt5.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QMessageBox
 from flask import Flask, request, g, jsonify, current_app
 import time
 import constants
@@ -256,6 +256,13 @@ def start_flask_app():
 
 
 def main():
+    server_env = os.getenv(constants.SERVER_ENV_KEY)
+    if server_env is None:
+        # sys.exit("错误：环境变量 " + constants.SERVER_ENV_KEY + " 未配置，请设置后再运行程序。")
+        app = QApplication(sys.argv)
+        QMessageBox.critical(None, "环境变量错误", "错误：环境变量 " + constants.SERVER_ENV_KEY + " 未配置，请设置后再运行程序。")
+        sys.exit(1)
+
     app = QApplication([])
     # 获取当前文件夹的路径
     current_dir = os.path.dirname(os.path.realpath(__file__))

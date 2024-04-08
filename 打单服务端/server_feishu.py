@@ -19,7 +19,7 @@ def do_write_one_record(record_data):
     app_secret = "tFYILUQVlsT7U4jDctg7VdwZWIMZYXbs"
     tenant_access_token = get_tenant_access_token(app_id, app_secret)
     url_write = ("https://open.feishu.cn/open-apis/bitable/v1/apps/SF79bwJc6awjy5sRrQAcSTzNn9L/tables/"
-                 + constants.FEISHU_TABLE_NAME + "/records")
+                 + constants.FEISHU_TABLE_NAME_ONLINE + "/records")
     header = {
         "content-type": "application/json",
         "Authorization": f"Bearer {tenant_access_token}"
@@ -57,7 +57,7 @@ def read_records():
     app_secret = "tFYILUQVlsT7U4jDctg7VdwZWIMZYXbs"
     tenant_access_token = get_tenant_access_token(app_id, app_secret)
     url = ("https://open.feishu.cn/open-apis/bitable/v1/apps/SF79bwJc6awjy5sRrQAcSTzNn9L/tables/"
-           + constants.FEISHU_TABLE_NAME + "/records/search")
+           + constants.FEISHU_TABLE_NAME_ONLINE + "/records/search")
     header = {
         "content-type": "application/json",
         "Authorization": f"Bearer {tenant_access_token}"
@@ -75,7 +75,7 @@ def read_records_by_order_ids(order_ids):
     app_secret = "tFYILUQVlsT7U4jDctg7VdwZWIMZYXbs"
     tenant_access_token = get_tenant_access_token(app_id, app_secret)
     url = ("https://open.feishu.cn/open-apis/bitable/v1/apps/SF79bwJc6awjy5sRrQAcSTzNn9L/tables/"
-           + constants.FEISHU_TABLE_NAME + "/records/search")
+           + constants.FEISHU_TABLE_NAME_ONLINE + "/records/search")
     header = {
         "content-type": "application/json",
         "Authorization": f"Bearer {tenant_access_token}"
@@ -98,7 +98,7 @@ def delete_records(record_ids):
     app_secret = "tFYILUQVlsT7U4jDctg7VdwZWIMZYXbs"
     tenant_access_token = get_tenant_access_token(app_id, app_secret)
     url = ("https://open.feishu.cn/open-apis/bitable/v1/apps/SF79bwJc6awjy5sRrQAcSTzNn9L/tables/"
-           + constants.FEISHU_TABLE_NAME + "/records/batch_delete")
+           + constants.FEISHU_TABLE_NAME_ONLINE + "/records/batch_delete")
     header = {
         "content-type": "application/json",
         "Authorization": f"Bearer {tenant_access_token}"

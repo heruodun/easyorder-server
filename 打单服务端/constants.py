@@ -1,4 +1,6 @@
 # 超过14天数据需要清理
+import os
+
 OLD_DATA_DAY = 14
 # 角色常量，英文变量名对应中文值
 PRINT = "打单"
@@ -23,4 +25,17 @@ COMPANY_NAME = "小王牛筋"
 JOB_ONE = "job1_delete_feishu"
 JOB_TWO = "job2_insert_feishu"
 
-FEISHU_TABLE_NAME = "tbldwOe9EHil0YtN"
+FEISHU_TABLE_NAME_ONLINE = "tblBmGg1sYkSV9GC"
+
+FEISHU_TABLE_NAME_TEST = "tbldwOe9EHil0YtN"
+
+SERVER_ENV_KEY = "ORDER_EASY_SERVER_ENV"
+
+
+def get_feishu_table():
+    if os.getenv('ORDER_EASY_SERVER_ENV') == 'online':
+        return FEISHU_TABLE_NAME_ONLINE
+    elif os.getenv('ORDER_EASY_SERVER_ENV') == 'test':
+        return FEISHU_TABLE_NAME_TEST
+    else:
+        return None
