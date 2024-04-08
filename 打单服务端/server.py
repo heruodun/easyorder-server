@@ -118,7 +118,79 @@ def get_str_from_excel(excel_str):
     return result_str
 
 
-def order_post_data(A12_F26):
+def order_post_data1(A12_H26):
+    # 地址数据
+    dizhi = A12_H26[0][1]
+    # 创单人员
+    man = A12_H26[14][1]
+    # 总条数
+    total_count = A12_H26[12][1]
+    # 长度数据
+    # 条数数据
+
+    str_l_d = ""
+    # 规格数据
+    guige = ""
+    # 备注数据
+    beizhu = ""
+
+    for i in range(0, 9):
+        length = get_str_from_excel(A12_H26[i + 3][2])
+        count = get_str_from_excel(A12_H26[i + 3][4])
+        guige = guige + get_str_from_excel(A12_H26[i + 3][0])
+        beizhu = beizhu + get_str_from_excel(A12_H26[i + 3][5])
+
+        # 如果两个都为空，则跳过当前循环
+        if length == "" and count == "":
+            continue
+        # 如果length为空，则将length置为0
+        if length == "":
+            length = 0
+        # 如果count为空，则将count置为0
+        if count == "":
+            count = 0
+
+        # 如果length是整数，则去掉小数部分
+        if isinstance(length, float) and length.is_integer():
+            length_str = str(int(length))
+        else:
+            length_str = str(length)
+
+        # 如果count是整数，则去掉小数部分
+        if isinstance(count, float) and count.is_integer():
+            count_str = str(int(count))
+        else:
+            count_str = str(count)
+        str_l_d += length_str + " x " + count_str + "，"
+    str_l_d = str_l_d[:-1]
+
+    # 如果total_count是整数，则去掉小数部分
+    if isinstance(total_count, float) and total_count.is_integer():
+        total_count_str = str(int(total_count))
+    else:
+        total_count_str = str(total_count)
+
+    if man is None:
+        man = ""
+    if dizhi is None:
+        dizhi = ""
+    if guige is None:
+        guige = ""
+    if total_count_str is None:
+        total_count_str = ""
+    if beizhu is None:
+        beizhu = ""
+
+    new_record_data = {
+        "printer": man,
+        "address": dizhi,
+        "content": "规格：" + str(
+            guige) + "\n\n长度和条数：" + str_l_d + "\n\n总条数：" + total_count_str + "\n\n备注：" + str(beizhu)
+    }
+    return new_record_data
+
+
+def order_post_data2(A12_F26):
     # 地址数据
     dizhi = A12_F26[0][1]
     # 创单人员
@@ -190,13 +262,10 @@ def order_post_data(A12_F26):
     return new_record_data
 
 
-def orders():
-    if request.method == 'POST':
-        db = server_db.get_db()
-    a12_f26 = request.get_json()["data"]
-    data = order_post_data(a12_f26)
+def save_one_order(data):
     if not data:
         return jsonify({"error": "Missing data in JSON payload"}), 400
+    db = server_db.get_db()
     try:
         current_timestamp = time.time()
         timestamp_ms = int(current_timestamp * 1000)
@@ -239,6 +308,29 @@ def orders():
     except sqlite3.Error as e:
         app.logger.error("Insert one order to local sync fail %s", data, e)
         return jsonify({"error": str(e)}), 500
+
+
+def order1():
+    if request.method == 'POST':
+        a12_f26 = request.get_json()["data"]
+        data = order_post_data1(a12_f26)
+        return save_one_order(data)
+    return jsonify({"error": "no method"}), 400
+
+def orders():
+    if request.method == 'POST':
+        a12_f26 = request.get_json()["data"]
+        data = order_post_data1(a12_f26)
+        return save_one_order(data)
+    return jsonify({"error": "no method"}), 400
+
+
+def order2():
+    if request.method == 'POST':
+        a12_f26 = request.get_json()["data"]
+        data = order_post_data2(a12_f26)
+        return save_one_order(data)
+    return jsonify({"error": "no method"}), 400
 
 
 def get_order_by_id():
@@ -288,8 +380,12 @@ def sync_data2():
 
 # 注册路由
 app.add_url_rule('/', 'index', index)
-# 创建一个订单
+# 创建模板一的一个订单
+app.add_url_rule('/order1', 'order1', order1, methods=['POST'])
+
 app.add_url_rule('/orders', 'orders', orders, methods=['POST'])
+# 创建模板二的一个订单
+app.add_url_rule('/order2', 'order2', order2, methods=['POST'])
 # 获取一个订单
 app.add_url_rule('/order', 'get_order_by_id', get_order_by_id, methods=['GET'])
 # 初始化数据库
