@@ -1,3 +1,25 @@
 /logs/*
 /.idea/*
 /build/*
+/打单客户端/VBA-JSON-2.3.1/.editorconfig
+/打单客户端/VBA-Dictionary-1.4.1/.gitattributes
+/打单客户端/VBA-JSON-2.3.1/.gitattributes
+/打单客户端/VBA-Dictionary-1.4.1/.gitignore
+/打单客户端/VBA-JSON-2.3.1/.gitignore
+/打单客户端/VBA-Dictionary-1.4.1/Dictionary.cls
+/打单客户端/VBA-JSON-2.3.1/JsonConverter.bas
+/打单客户端/VBA-JSON-2.3.1/LICENSE
+/打单客户端/Microsoft BarCode Control 16.0.rar
+/打单客户端/VBA-JSON-2.3.1/README.md
+/打单客户端/VBA-Dictionary-1.4.1/readme.md
+/打单服务端/logs/server_app.log
+/打单服务端/dist/logs/server_app.log.2024-04-08
+/打单服务端/logs/server_app.log.2024-04-08
+/打单客户端/VBA-Dictionary-1.4.1/specs/Specs.bas
+/打单客户端/VBA-JSON-2.3.1/specs/Specs.bas
+/打单客户端/VBA-JSON-2.3.1/vba-block.toml
+/打单客户端/VBA-Dictionary-1.4.1/specs/VBA-Dictionary - Specs.xlsm
+/打单客户端/VBA-JSON-2.3.1/specs/VBA-JSON - Specs.xlsm
+/打单服务端/build/
+/打单服务端/logs/
+/打单服务端/build/
