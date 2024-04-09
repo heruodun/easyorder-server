@@ -29,6 +29,10 @@ FEISHU_TABLE_NAME_ONLINE = "tblBmGg1sYkSV9GC"
 
 FEISHU_TABLE_NAME_TEST = "tbldwOe9EHil0YtN"
 
+FEISHU_TABLE_CHAT_ONLINE = "oc_8bfc53fcc82aa85ee5c23ae64ce4ae8b"
+
+FEISHU_TABLE_CHAT_TEST = "oc_408054f11251acb94985eacc794bcaf0"
+
 SERVER_ENV_KEY = "ORDER_EASY_SERVER_ENV"
 
 
@@ -37,5 +41,14 @@ def get_feishu_table():
         return FEISHU_TABLE_NAME_ONLINE
     elif os.getenv('ORDER_EASY_SERVER_ENV') == 'test':
         return FEISHU_TABLE_NAME_TEST
+    else:
+        return ""
+
+
+def get_feishu_chat():
+    if os.getenv('ORDER_EASY_SERVER_ENV') == 'online':
+        return FEISHU_TABLE_CHAT_ONLINE
+    elif os.getenv('ORDER_EASY_SERVER_ENV') == 'test':
+        return FEISHU_TABLE_CHAT_TEST
     else:
         return ""

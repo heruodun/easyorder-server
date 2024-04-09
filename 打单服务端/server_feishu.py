@@ -1,6 +1,9 @@
+import json
+
 import requests
 import constants
 from server import app
+import server_message
 
 
 def get_tenant_access_token(app_id, app_secret):
@@ -128,27 +131,6 @@ def read_users(phone, password):
         "Authorization": f"Bearer {tenant_access_token}"
     }
 
-    # {
-    #     "filter": {
-    #         "conjunction": "and",
-    #         "conditions": [
-    #             {
-    #                 "field_name": "手机号码",
-    #                 "operator": "is",
-    #                 "value": [
-    #                     "15500000001"
-    #                 ]
-    #             },
-    #             {
-    #                 "field_name": "密码",
-    #                 "operator": "is",
-    #                 "value": [
-    #                     "888"
-    #                 ]
-    #             }
-    #         ]
-    #     }
-    # }
     json = {
         "filter": {
             "conjunction": "and",
@@ -180,10 +162,49 @@ def read_users(phone, password):
         if res["code"] == 0:
             name = res["data"]["items"][0]["fields"]["姓名"][0]["text"]
         else:
-            code = -1
-            app.logger.info("Remote service call failed with status code:", res["code"])
+            app.logger.error("Remote service call failed with status code:", res["code"])
     except requests.HTTPError as e:
-        app.logger.info(f"An HTTP error occurred: {e}")
+        app.logger.error(f"An HTTP error occurred: {e}")
     except Exception as e:
-        app.logger.info(f"An error occurred: {e}")
+        app.logger.error(f"An error occurred: {e}")
     return code, name
+
+
+# new_msg_data = {
+#         "order_id":"订单编号",
+#         "record_id":"编号",
+#         "address": 地址,
+#         "content": 货物内容,
+#         "cur_time": 打单时间 格式为 2024-03-04 12:00:00,
+#         "cur_man":打单人,
+#         "cur_pro:当前进度": constants.PRINT
+#     }
+# }
+def send_one_message(data):
+    app_id = "cli_a57140de9afb5013"
+    app_secret = "tFYILUQVlsT7U4jDctg7VdwZWIMZYXbs"
+    tenant_access_token = get_tenant_access_token(app_id, app_secret)
+    url = "https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=chat_id"
+    payload = json.dumps({
+        "content": server_message.message_content(data),
+        "msg_type": "interactive",
+        "receive_id": str(constants.get_feishu_chat())
+    })
+
+    headers = {
+        "content-type": "application/json",
+        "Authorization": f"Bearer {tenant_access_token}"
+    }
+
+    try:
+        response = requests.request("POST", url, headers=headers, data=payload)
+        res = response.json()
+        app.logger.info("send user ", res)
+        if res["code"] == 0:
+            app.logger.info("send msg success %s", data)
+        else:
+            app.logger.error("send msg failed with status code: %s", res["code"])
+    except requests.HTTPError as e:
+        app.logger.error(f"An HTTP error occurred: {e}")
+    except Exception as e:
+        app.logger.error(f"An error occurred: {e}")

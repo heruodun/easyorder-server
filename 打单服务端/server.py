@@ -97,18 +97,20 @@ def index():
     '''
 
 
-def call_remote_service_async(data):
+def call_remote_service_async(insert_data, msg_data):
     count = 0
     ok = False
 
     while not ok and count < 3:  # 使用while循环重试逻辑
-        ok = server_feishu.write_one_record(data)
+        ok = server_feishu.write_one_record(insert_data)
+        if ok:
+            server_feishu.send_one_message(msg_data)
         if not ok:
             # 如果请求没有成功，稍微等待一段时间再次重试
             time.sleep(1)  # 等待1秒再次尝试
     if not ok:
         # 这里处理所有尝试失败的逻辑，如记录日志或发送报警通知
-        app.logger.error("Insert one order to feishu async %s times fail %s", count, data)
+        app.logger.error("Insert one order to feishu async %s times fail %s", count, insert_data)
 
 
 def get_str_from_excel(excel_str):
@@ -133,7 +135,6 @@ def order_post_data1(A12_H26):
     guige = ""
     # 备注数据
     beizhu = ""
-
     for i in range(0, 9):
         length = get_str_from_excel(A12_H26[i + 3][2])
         count = get_str_from_excel(A12_H26[i + 3][4])
@@ -149,6 +150,8 @@ def order_post_data1(A12_H26):
         # 如果count为空，则将count置为0
         if count == "":
             count = 0
+
+
 
         # 如果length是整数，则去掉小数部分
         if isinstance(length, float) and length.is_integer():
@@ -262,8 +265,19 @@ def save_one_order(data):
                 "总体进度": "打单人：" + data["printer"] + "，打单时间：" + formatted_time
             }
         }
+
+        new_msg_data = {
+            "order_id": order_id,
+            "id": record_id,
+            "address": data["address"],
+            "content": data["content"],
+            "cur_progress": constants.PRINT,
+            "cur_man": data["printer"],
+            "cur_time": formatted_time
+        }
         app.logger.info("Insert one order to feishu async %s", new_record_data)
-        thread = threading.Thread(target=call_remote_service_async, args=(new_record_data,))
+        app.logger.info("Send one msg to feishu async %s", new_msg_data)
+        thread = threading.Thread(target=call_remote_service_async, args=(new_record_data, new_msg_data, ))
         thread.start()
 
         return jsonify({
