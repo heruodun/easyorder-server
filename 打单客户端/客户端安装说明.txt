@@ -1,5 +1,7 @@
-1 将spring文件放到 python中client文件位置 
-
-C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\site-packages\spring.py
-
-2 环境变量设置 设置系统环境变量 key为 SERVER_IP value为服务器内网地址 比如 192.168.1.88
+1 Excel配置
+选项 信任中心 信任中心设置 允许宏
+选项 自定义功能 加入开发工具
+2 excel需要引入vba-json 在vba工程中导入VBA-JSON-2.3.1中的vba文件
+3 引入Microsoft Scripting Runtime库；导入Dictionary库 并且 cmd键入 regsvr32 scrrun.dll 以让Dictionary生效
+4 环境变量设置 设置系统环境变量 key为 ORDER_EASY_SERVER_IP value为服务器内网地址 比如 192.168.0.88
+5 需要安装下excel中的qrco  de支持 在barcode16里面，安装完需要检查下code是否绑定生效
