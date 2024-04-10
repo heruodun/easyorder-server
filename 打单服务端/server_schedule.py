@@ -99,22 +99,38 @@ def scheduled_job1_insert_feishu(db):
             }
         }
 
-        server_feishu.write_one_record(new_record_data)
+        ok = server_feishu.write_one_record(new_record_data)
+        if ok:
+            server_db.update_order_status(db, constants.LOCAL_DATA_FIRST_INSERT, order_id)
         time.sleep(1)
     app.logger.info("end scheduled_job1_insert_feishu job....................")
 
 
-def get_order_ids_from_feishu(initial_order_id):
-    # 假定 read_records_by_Ids 已正确实现并返回数据
-    if not initial_order_id:
+def get_order_ids_from_feishu(order_ids):
+    # 假定 read_records_by_order_ids 已正确实现并返回数据
+    if not order_ids:
         return []
-    response_data = server_feishu.read_records_by_order_ids(initial_order_id)
-    if response_data['code'] == 0:
-        order_ids = [item['fields']['订单编号'] for item in response_data['data']['items']]
-    else:
-        app.logger.info("Error in fetching records")
-        return []
-    return order_ids
+
+    # 设置每次请求的订单ID数量
+    page_size = 20
+    all_order_ids = []
+
+    # 将订单ID拆分为每20个一组
+    order_id_groups = [order_ids[i:i + page_size] for i in range(0, len(order_ids), page_size)]
+
+    # 分别处理每组订单ID
+    for ids in order_id_groups:
+        response_data = server_feishu.read_records_by_order_ids(ids)
+        if response_data['code'] == 0:
+            # 收集当前批次结果
+            batch_order_ids = [item['fields']['订单编号'] for item in response_data['data']['items']]
+            all_order_ids.extend(batch_order_ids)
+        else:
+            app.logger.error("Error in fetching records from feishu %s", response_data)
+            # 出错时，可以选择中断循环或继续尝试后续批次
+            break
+
+    return all_order_ids
 
 
 # todo 将打单时间>14天 且 当前状态为 发货 的单子 从feishu中删除 删除前把这份数据同步到本地服务器
@@ -136,7 +152,7 @@ def scheduled_job2_delete_feishu_update_local(db):
             else:
                 # todo 处理异常 如果是false此次更新就失败了
                 has_more = False
-            app.logger.info("Remote service call success with status code:", response["code"])
+            app.logger.info("Remote service call success with status code: %s", response["code"])
     except requests.HTTPError as e:
         app.logger.info(f"An HTTP error occurred: {e}")
     except sqlite3.Error as e:

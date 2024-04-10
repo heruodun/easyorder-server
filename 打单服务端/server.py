@@ -97,13 +97,20 @@ def index():
     '''
 
 
-def call_remote_service_async(insert_data, msg_data):
+def call_remote_service_async(insert_data, msg_data, order_id):
+    app.logger.info("call_remote_service_async begin to insert one order to feishu async %s", insert_data)
+    app.logger.info("call_remote_service_async begin to send one msg to feishu async %s", msg_data)
     count = 0
     ok = False
 
     while not ok and count < 3:  # 使用while循环重试逻辑
         ok = server_feishu.write_one_record(insert_data)
         if ok:
+            app.logger.info("call_remote_service_async insert one order to feishu async success %s", order_id)
+            with app.app_context():
+                db = server_db.get_db();
+                server_db.update_order_status(db, constants.LOCAL_DATA_FIRST_INSERT, order_id)
+                app.logger.info("call_remote_service_async update one order sync status to 1 success %s", order_id)
             server_feishu.send_one_message(msg_data)
         if not ok:
             # 如果请求没有成功，稍微等待一段时间再次重试
@@ -275,9 +282,8 @@ def save_one_order(data):
             "cur_man": data["printer"],
             "cur_time": formatted_time
         }
-        app.logger.info("Insert one order to feishu async %s", new_record_data)
-        app.logger.info("Send one msg to feishu async %s", new_msg_data)
-        thread = threading.Thread(target=call_remote_service_async, args=(new_record_data, new_msg_data, ))
+        a
+        thread = threading.Thread(target=call_remote_service_async, args=(new_record_data, new_msg_data, order_id, ))
         thread.start()
 
         return jsonify({

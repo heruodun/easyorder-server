@@ -36,13 +36,13 @@ def do_write_one_record(record_data):
 def write_one_record(data):
     ok = False
     try:
-        app.logger.info("call_remote_service_async request data", data)
+        app.logger.info("call_remote_service_async request data %s", data)
         # 模拟异步地请求远程服务
         response = do_write_one_record(data)  # 假设这里是你的异步HTTP请求
-        app.logger.info("call_remote_service_async response data", response)
+        app.logger.info("call_remote_service_async response data %s", response)
 
         if response["code"] == 0:  # 假定当响应码为0时表示成功
-            # server_db.update_order_status(constants.LOCAL_DATA_UPDATE_ING, order_id)
+
             app.logger.info("call_remote_service_async success")
             ok = True  # 请求成功，退出循环
         else:
