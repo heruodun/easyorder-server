@@ -282,7 +282,6 @@ def save_one_order(data):
             "cur_man": data["printer"],
             "cur_time": formatted_time
         }
-        a
         thread = threading.Thread(target=call_remote_service_async, args=(new_record_data, new_msg_data, order_id, ))
         thread.start()
 
