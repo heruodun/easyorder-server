@@ -146,6 +146,8 @@ def init_db():
 
     # 为order_id列创建索引
     db.execute('''CREATE INDEX IF NOT EXISTS idx_order_id ON orders (order_id)''')
+    db.execute('''CREATE UNIQUE INDEX IF NOT EXISTS idx_job_type ON jobs (job_type)''')
+
     # 初始化 其他地方不得用Insert
     job_types = [constants.JOB_ONE, constants.JOB_TWO]
     init_job_trans(db, job_types)

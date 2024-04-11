@@ -3,6 +3,7 @@
   <component name="Encoding">
     <file url="file://$PROJECT_DIR$/logs/flask_app.log" charset="GBK" />
     <file url="file://$PROJECT_DIR$/logs/server_app.log" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/打单服务端/dist/logs/server_app.log" charset="GBK" />
     <file url="file://$PROJECT_DIR$/打单服务端/logs/server_app.log" charset="GBK" />
   </component>
 </project>
