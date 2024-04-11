@@ -1,4 +1,4 @@
-from flask import Flask, request, g, jsonify
+from flask import g
 import sqlite3
 from datetime import datetime
 
@@ -20,10 +20,10 @@ def insert_record(db, data):
     cur.execute('''INSERT INTO orders (
  address, content, cur_status, printer, print_time,
  order_trace, sync_status
- ) VALUES (?,?,'打单', ?, ?, ?, ?)''', (
+ ) VALUES (?,?,?, ?, ?, ?, ?)''', (
         data.get('address'),
         data.get('content'),
-
+        '打单',
         data.get('printer'),
         data.get('print_time'),
         data.get('order_trace'),
@@ -46,8 +46,41 @@ def get_order_by_id(order_id):
     cur = db.cursor()
     order_cursor = cur.execute('SELECT * FROM orders WHERE order_id = ?', (order_id,))
     order = order_cursor.fetchone()
-    print("get_order_by_id", order)
     return order
+
+def get_orders(limit, offset):
+    # 计算分页
+    query = """
+        SELECT id, order_id, address, content, cur_status, cur_man, cur_time, printer, print_time, order_trace, update_time, sync_status
+        FROM orders
+        ORDER BY id DESC
+        LIMIT ? OFFSET ?
+    """
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute(query, (limit, offset))
+
+    # 取出查询结果
+    orders = cursor.fetchall()
+
+    # 格式化输出结果
+    result = []
+    for order in orders:
+        result.append({
+            'id': order[0],
+            'order_id': order[1],
+            'address': order[2],
+            'content': order[3],
+            'cur_status': order[4],
+            'cur_man': order[5],
+            'cur_time': order[6],
+            'printer': order[7],
+            'print_time': order[8],
+            'order_trace': order[9],
+            'update_time': order[10],
+            'sync_status': order[11],
+        })
+    return result
 
 
 def get_order_ids_by_status(db, status, print_time_before, print_time_after):
@@ -63,12 +96,17 @@ def get_order_ids_by_status(db, status, print_time_before, print_time_after):
 
 def update_order(db, cur_status, cur_man, cur_time, order_trace, sync_status, order_id):
     # 更新本地数据库中的订单数据
-    db.execute('''
- UPDATE orders
- SET cur_status = ?, cur_man = ?, cur_time = ?, order_trace = ?, sync_status = ?
- WHERE order_id = ?
- ''', (cur_status, cur_man, cur_time, order_trace, sync_status, order_id))
+    cursor = db.cursor()
+    cursor.execute('''UPDATE orders SET cur_status = ?, cur_man = ?, cur_time = ?, order_trace = ?, sync_status = ?
+ WHERE order_id = ?''', (cur_status, cur_man, cur_time, order_trace, sync_status, order_id))
     db.commit()
+    # 检查更新的行数
+    if cursor.rowcount > 0:
+        # 如果影响的行数大于零，认为更新成功
+        return True
+    else:
+        # 没有行被更新，可能是因为指定的order_id不存在
+        return False
 
 
 def update_order_status(db, sync_status, order_id):
@@ -76,6 +114,13 @@ def update_order_status(db, sync_status, order_id):
     # 更新本地数据库中的订单数据
     cursor.execute('''UPDATE orders SET sync_status = ? WHERE order_id = ?''', (sync_status, order_id))
     db.commit()
+    # 检查更新的行数
+    if cursor.rowcount > 0:
+        # 如果影响的行数大于零，认为更新成功
+        return 1
+    else:
+        # 没有行被更新，可能是因为指定的order_id不存在
+        return -1
 
 
 def start_job(db):

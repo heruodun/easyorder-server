@@ -6,7 +6,7 @@ from logging.handlers import TimedRotatingFileHandler
 
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QMessageBox
-from flask import Flask, request, g, jsonify, current_app
+from flask import Flask, request, jsonify
 import time
 import constants
 import server_db
@@ -108,7 +108,7 @@ def call_remote_service_async(insert_data, msg_data, order_id):
         if ok:
             app.logger.info("call_remote_service_async insert one order to feishu async success %s", order_id)
             with app.app_context():
-                db = server_db.get_db();
+                db = server_db.get_db()
                 server_db.update_order_status(db, constants.LOCAL_DATA_FIRST_INSERT, order_id)
                 app.logger.info("call_remote_service_async update one order sync status to 1 success %s", order_id)
             server_feishu.send_one_message(msg_data)
@@ -289,7 +289,7 @@ def save_one_order(data):
             "status": "Order added and updated",
             "record_id": record_id,
             "order_id": order_id,
-            "qr_code": str(order_id) + "$xiaowangniujin",
+            "qr_code": str(order_id) + constants.QR_CODE_SUFFIXES,
             "create_time": formatted_time
         }), 201
     except sqlite3.Error as e:
@@ -299,24 +299,24 @@ def save_one_order(data):
 
 def order1():
     if request.method == 'POST':
-        a12_f26 = request.get_json()["data"]
-        data = order_post_data1(a12_f26)
+        a12_h26 = request.get_json()["data"]
+        data = order_post_data1(a12_h26)
         return save_one_order(data)
     return jsonify({"error": "no method"}), 400
 
 
 def orders():
     if request.method == 'POST':
-        a12_f26 = request.get_json()["data"]
-        data = order_post_data1(a12_f26)
+        a12_h26 = request.get_json()["data"]
+        data = order_post_data1(a12_h26)
         return save_one_order(data)
     return jsonify({"error": "no method"}), 400
 
 
 def order2():
     if request.method == 'POST':
-        a12_f26 = request.get_json()["data"]
-        data = order_post_data2(a12_f26)
+        a12_h26 = request.get_json()["data"]
+        data = order_post_data2(a12_h26)
         return save_one_order(data)
     return jsonify({"error": "no method"}), 400
 
@@ -330,6 +330,19 @@ def get_order_by_id():
         return jsonify(dict(order)), 200
     else:
         return jsonify({"error": "Order not found"}), 404
+
+
+def local_orders():
+    # 获取页码参数，默认为1
+    page_no = request.args.get('pageno', 1, type=int)
+    # 获取每页显示的记录数参数，默认为10
+    per_page = request.args.get('perpage', 1000, type=int)
+
+    # 计算开始的记录位置
+    start = (page_no - 1) * per_page
+    result = server_db.get_orders(per_page, start)
+    # 响应请求
+    return jsonify(result), 200
 
 
 def init_db():
@@ -384,6 +397,11 @@ app.add_url_rule('/login', 'login', login, methods=['GET'])
 app.add_url_rule('/sync1', 'sync1', sync_data1, methods=['GET'])
 
 app.add_url_rule('/sync2', 'sync2', sync_data2, methods=['GET'])
+
+app.add_url_rule('/local/orders', 'local_orders', local_orders, methods=['GET'])
+
+app.add_url_rule('/remote/orders', 'remote_orders', local_orders, methods=['GET'])
+
 
 # 注册应用上下文的清理函数
 app.teardown_appcontext(server_db.close_connection)

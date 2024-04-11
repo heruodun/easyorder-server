@@ -1,5 +1,4 @@
 import json
-
 import requests
 import constants
 from server import app
@@ -56,14 +55,19 @@ def write_one_record(data):
         return ok
 
 
-def read_records():
+def read_records(page_token, page_size):
     app_id = "cli_a57140de9afb5013"
     app_secret = "tFYILUQVlsT7U4jDctg7VdwZWIMZYXbs"
     tenant_access_token = get_tenant_access_token(app_id, app_secret)
     feishu_table = constants.get_feishu_table()
 
+    # 将 page_size 参数转换为字符串
+    page_size_str = str(page_size)
+
     url = ("https://open.feishu.cn/open-apis/bitable/v1/apps/SF79bwJc6awjy5sRrQAcSTzNn9L/tables/"
-           + feishu_table + "/records/search")
+           + feishu_table + "/records/search?page_size=" + page_size_str)
+    if page_token:
+        url += "&page_token=" + page_token
     header = {
         "content-type": "application/json",
         "Authorization": f"Bearer {tenant_access_token}"
@@ -100,6 +104,30 @@ def read_records_by_order_ids(order_ids):
 
     response = requests.post(url, headers=header, json=json)
     return response.json()
+
+
+def delete_records_in_batches(record_ids, batch_size=100):
+    """
+    分页删除Feishu中的记录。
+
+    :param record_ids: 要删除的记录ID列表。
+    :param batch_size: 单页删除的记录数量。
+    """
+    # 计算分页数量
+    total_records = len(record_ids)
+    num_pages = total_records // batch_size + (1 if total_records % batch_size > 0 else 0)
+
+    # 逐页删除记录
+    for page in range(num_pages):
+        # 计算当前页的起始索引和结束索引
+        start_index = page * batch_size
+        end_index = start_index + batch_size
+        # 获取当前页的记录ID
+        batch_to_delete = record_ids[start_index:end_index]
+
+        # 删除当前页面的记录ID
+        delete_records(batch_to_delete)
+        app.logger.info(f"Deleted batch {page + 1} of {num_pages} (IDs: {batch_to_delete})")
 
 
 def delete_records(record_ids):
@@ -199,7 +227,6 @@ def send_one_message(data):
     try:
         response = requests.request("POST", url, headers=headers, data=payload)
         res = response.json()
-        app.logger.info("send user ", res)
         if res["code"] == 0:
             app.logger.info("send msg success %s", data)
         else:

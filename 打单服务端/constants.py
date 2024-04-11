@@ -15,12 +15,16 @@ REMOTE_DATA_HAS_DELETED = 100
 REMOTE_DATA_TO_BE_DELETE = 99
 # 已经到发货状态，可以删除远程数据
 REMOTE_DATA_CAN_BE_DELETE = 98
+# 远端数据更新到本地
+REMOTE_DATA_UPDATE_LOCAL = 2
 # 本地数据第一次插入到远端
 LOCAL_DATA_FIRST_INSERT = 1
 # 初始化
 LOCAL_DATA_INIT = 0
 
 COMPANY_NAME = "小王牛筋"
+
+QR_CODE_SUFFIXES = "$xiaowangniujin"
 
 JOB_ONE = "job1_delete_feishu"
 JOB_TWO = "job2_insert_feishu"
