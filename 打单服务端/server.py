@@ -164,8 +164,6 @@ def order_post_data1(A12_H26):
         if count == "":
             count = 0
 
-
-
         # 如果length是整数，则去掉小数部分
         if isinstance(length, float) and length.is_integer():
             length_str = str(int(length))
@@ -200,8 +198,8 @@ def order_post_data1(A12_H26):
     new_record_data = {
         "printer": man,
         "address": no_spaces_dizhi,
-        "content": "规格：" + str(
-            guige) + "\n\n长度和条数：" + str_l_d + "\n\n总条数：" + total_count_str + "\n\n备注：" + str(beizhu)
+        "content": "总条数：" + total_count_str + "\n\n规格：" + str(
+            guige) + "\n\n长度和条数：" + str_l_d + "\n\n备注：" + str(beizhu)
     }
     return new_record_data
 
