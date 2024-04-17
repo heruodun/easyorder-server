@@ -39,6 +39,29 @@ FEISHU_TABLE_CHAT_TEST = "oc_408054f11251acb94985eacc794bcaf0"
 
 SERVER_ENV_KEY = "ORDER_EASY_SERVER_ENV"
 
+# 条数与总条数不一致
+INSERT_ERROR_CODE_1 = 10001
+# 条数不是整数
+INSERT_ERROR_CODE_2 = 10002
+# 总长度不是整数
+INSERT_ERROR_CODE_3 = 10003
+# 地址不在地址库
+INSERT_ERROR_CODE_4 = 10004
+
+
+def get_inset_err_msg(code):
+    if code == INSERT_ERROR_CODE_1:
+        return "总条数不正确"
+    if code == INSERT_ERROR_CODE_2:
+        return "条数不是整数"
+    if code == INSERT_ERROR_CODE_3:
+        return "总长度不是整数"
+    if code == INSERT_ERROR_CODE_4:
+        return "地址不在地址库"
+
+
+
+
 
 def get_feishu_table():
     if os.getenv('ORDER_EASY_SERVER_ENV') == 'online':

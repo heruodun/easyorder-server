@@ -130,6 +130,12 @@ def get_str_from_excel(excel_str):
 def order_post_data1(A12_H26):
     # 地址数据
     dizhi = A12_H26[0][1]
+
+    # 去除前后空格和换行
+    trimmed_string = dizhi.strip()
+    # 去除中间的空格
+    no_spaces_dizhi = trimmed_string.replace(" ", "")
+
     # 创单人员
     man = A12_H26[14][1]
     # 总条数
@@ -182,8 +188,8 @@ def order_post_data1(A12_H26):
 
     if man is None:
         man = ""
-    if dizhi is None:
-        dizhi = ""
+    if no_spaces_dizhi is None:
+        no_spaces_dizhi = ""
     if guige is None:
         guige = ""
     if total_count_str is None:
@@ -193,7 +199,7 @@ def order_post_data1(A12_H26):
 
     new_record_data = {
         "printer": man,
-        "address": dizhi,
+        "address": no_spaces_dizhi,
         "content": "规格：" + str(
             guige) + "\n\n长度和条数：" + str_l_d + "\n\n总条数：" + total_count_str + "\n\n备注：" + str(beizhu)
     }
@@ -282,7 +288,7 @@ def save_one_order(data):
             "cur_man": data["printer"],
             "cur_time": formatted_time
         }
-        thread = threading.Thread(target=call_remote_service_async, args=(new_record_data, new_msg_data, order_id, ))
+        thread = threading.Thread(target=call_remote_service_async, args=(new_record_data, new_msg_data, order_id,))
         thread.start()
 
         return jsonify({
@@ -379,6 +385,24 @@ def sync_data2():
     return jsonify({"remote job run": "ok"}), 200
 
 
+@app.errorhandler(Exception)
+def handle_exception(e):
+    # 对错误进行记录
+    app.logger.error('%s', (e))
+    # 通知报警系统
+    send_notification('An error occurred: {}'.format(str(e)))
+    return 'An internal error occurred.', 500
+
+
+def send_notification(err_message):
+    server_feishu.send_one_alert_message('Application Error Alert' + err_message)
+
+
+@app.route('/health')
+def health_check():
+    return 'OK', 200
+
+
 # 注册路由
 app.add_url_rule('/', 'index', index)
 # 创建模板一的一个订单
@@ -401,7 +425,6 @@ app.add_url_rule('/sync2', 'sync2', sync_data2, methods=['GET'])
 app.add_url_rule('/local/orders', 'local_orders', local_orders, methods=['GET'])
 
 app.add_url_rule('/remote/orders', 'remote_orders', local_orders, methods=['GET'])
-
 
 # 注册应用上下文的清理函数
 app.teardown_appcontext(server_db.close_connection)
