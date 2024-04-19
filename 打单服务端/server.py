@@ -128,6 +128,7 @@ def get_str_from_excel(excel_str):
 
 
 def order_post_data1(A12_H26):
+    code = 0
     # 地址数据
     dizhi = A12_H26[0][1]
 
@@ -148,6 +149,8 @@ def order_post_data1(A12_H26):
     guige = ""
     # 备注数据
     beizhu = ""
+    sum_count = 0  # 初始化条数求和变量
+
     for i in range(0, 9):
         length = get_str_from_excel(A12_H26[i + 3][2])
         count = get_str_from_excel(A12_H26[i + 3][4])
@@ -157,12 +160,14 @@ def order_post_data1(A12_H26):
         # 如果两个都为空，则跳过当前循环
         if length == "" and count == "":
             continue
+
+        count = int(count) if count else 0
+        sum_count += count  # 累加count
+
         # 如果length为空，则将length置为0
         if length == "":
-            length = 0
-        # 如果count为空，则将count置为0
-        if count == "":
-            count = 0
+            code = constants.INSERT_ERROR_CODE_5
+            return {}, code
 
         # 如果length是整数，则去掉小数部分
         if isinstance(length, float) and length.is_integer():
@@ -170,20 +175,18 @@ def order_post_data1(A12_H26):
         else:
             length_str = str(length)
 
-        # 如果count是整数，则去掉小数部分
-        if isinstance(count, float) and count.is_integer():
-            count_str = str(int(count))
-        else:
-            count_str = str(count)
+        count_str = str(count)
         str_l_d += length_str + " x " + count_str + "，"
     str_l_d = str_l_d[:-1]
 
-    # 如果total_count是整数，则去掉小数部分
-    if isinstance(total_count, float) and total_count.is_integer():
-        total_count_str = str(int(total_count))
-    else:
-        total_count_str = str(total_count)
+    # 如果total_count是整数字符串，则转换成整数
+    total_count = int(total_count) if total_count else 0
 
+    if sum_count != total_count:
+        code = constants.INSERT_ERROR_CODE_1  # 如果累加的count总和与total_count不相等，则设置code为1
+        return {}, code
+
+    total_count_str = str(total_count)
     if man is None:
         man = ""
     if no_spaces_dizhi is None:
@@ -201,7 +204,7 @@ def order_post_data1(A12_H26):
         "content": "总条数：" + total_count_str + "\n\n规格：" + str(
             guige) + "\n\n长度和条数：" + str_l_d + "\n\n备注：" + str(beizhu)
     }
-    return new_record_data
+    return new_record_data, code
 
 
 def order_post_data2(A12_H26):
@@ -304,16 +307,11 @@ def save_one_order(data):
 def order1():
     if request.method == 'POST':
         a12_h26 = request.get_json()["data"]
-        data = order_post_data1(a12_h26)
-        return save_one_order(data)
-    return jsonify({"error": "no method"}), 400
-
-
-def orders():
-    if request.method == 'POST':
-        a12_h26 = request.get_json()["data"]
-        data = order_post_data1(a12_h26)
-        return save_one_order(data)
+        data, code = order_post_data1(a12_h26)
+        if code == 0:
+            return save_one_order(data)
+        else:
+            return jsonify({"error": constants.get_inset_err_msg(code)}), 400
     return jsonify({"error": "no method"}), 400
 
 
@@ -406,7 +404,6 @@ app.add_url_rule('/', 'index', index)
 # 创建模板一的一个订单
 app.add_url_rule('/order1', 'order1', order1, methods=['POST'])
 
-app.add_url_rule('/orders', 'orders', orders, methods=['POST'])
 # 创建模板二的一个订单
 app.add_url_rule('/order2', 'order2', order2, methods=['POST'])
 # 获取一个订单

@@ -47,6 +47,8 @@ INSERT_ERROR_CODE_2 = 10002
 INSERT_ERROR_CODE_3 = 10003
 # 地址不在地址库
 INSERT_ERROR_CODE_4 = 10004
+# 长度为空
+INSERT_ERROR_CODE_5 = 10005
 
 
 def get_inset_err_msg(code):
@@ -58,6 +60,8 @@ def get_inset_err_msg(code):
         return "总长度不是整数"
     if code == INSERT_ERROR_CODE_4:
         return "地址不在地址库"
+    if code == INSERT_ERROR_CODE_5:
+        return "长度为空"
 
 
 
