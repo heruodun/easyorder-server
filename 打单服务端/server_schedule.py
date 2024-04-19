@@ -227,9 +227,12 @@ def process_orders(db, orders):
             status = constants.REMOTE_DATA_CAN_BE_DELETE
 
         # 创建时间超过一定的天数订单且状态是送货中 从远程删除掉
-        if is_timestamp_older_than_x_days(creation_time, constants.OLD_DATA_DAY):
-            if cur_status == constants.DELIVERY:
+        if is_timestamp_older_than_x_days(creation_time, constants.DONE_DELETE_DATA_DAY):
+            if (cur_status == constants.DELIVERY) or (cur_status == constants.RECEIVE):
                 status = constants.REMOTE_DATA_TO_BE_DELETE
+
+        if is_timestamp_older_than_x_days(creation_time, constants.ALL_DELETE_DATA_DAY):
+            status = constants.REMOTE_DATA_TO_BE_DELETE
 
         # update local data
         ok = server_db.update_order(db, cur_status, cur_man, cur_time, order_trace, status, order_id)
@@ -238,11 +241,11 @@ def process_orders(db, orders):
 
     # end for
     if orders_to_delete:
-        app.logger.info(f"begin delete orders > 14 days and status is delivery {orders_to_delete} from remote service")
+        app.logger.info(f"begin delete orders > 14 days or > 30days  {orders_to_delete} from remote service")
         server_feishu.delete_records_in_batches(orders_to_delete, 200)
-        app.logger.info(f"end delete orders > 14 days and status is delivery {orders_to_delete} from remote service")
+        app.logger.info(f"end delete orders > 14 days or > 30days {orders_to_delete} from remote service")
     else:
-        app.logger.info(f"orders > 14 days and status is delivery is none from remote service")
+        app.logger.info(f"orders > 14 days or > 30days is none from remote service")
 
 
 def is_timestamp_older_than_x_days(timestamp_ms, x_days):

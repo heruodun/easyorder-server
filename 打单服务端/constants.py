@@ -1,13 +1,16 @@
-# 超过14天数据需要清理
+
 import os
 
-OLD_DATA_DAY = 14
+# 对接收货或者送货状态删除的天数
+DONE_DELETE_DATA_DAY = 14
+# 全部单子的删除天数
+ALL_DELETE_DATA_DAY = 30
 # 角色常量，英文变量名对应中文值
 PRINT = "打单"
 PICK = "配货"
 DELIVERY = "送货"
 COORDINAT = "对接"
-RECEIVE = "对接送货"
+RECEIVE = "对接收货"
 
 # 远程数据已被删除
 REMOTE_DATA_HAS_DELETED = 100
