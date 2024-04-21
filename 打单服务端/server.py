@@ -6,7 +6,7 @@ from logging.handlers import TimedRotatingFileHandler
 
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QMessageBox
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, g
 import time
 import constants
 import server_db
@@ -17,6 +17,8 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 app = Flask(__name__)
 version = "1.0.0"
+
+app.config['places'] = None
 
 
 def init_logger():
@@ -51,6 +53,20 @@ def init_logger():
 
     # 设置日志记录级别
     app.logger.setLevel(logging.INFO)
+
+
+def get_addresses():
+    return server_db.get_addresses()
+
+
+def get_places():
+    place_list = app.config['places']
+    if place_list is None:
+        addresses = server_db.get_addresses()
+        place_list = [item['place'] for item in addresses]
+        place_list.sort(key=constants.sort_key)
+        app.config['places'] = place_list
+    return place_list
 
 
 # 记录所有请求的信息（可选）
@@ -136,6 +152,12 @@ def order_post_data1(A12_H26):
     trimmed_string = dizhi.strip()
     # 去除中间的空格
     no_spaces_dizhi = trimmed_string.replace(" ", "")
+
+    # 校验地址
+    # places = get_places()
+    # if no_spaces_dizhi not in places:
+    #     code = constants.INSERT_ERROR_CODE_4
+    #     return {}, code
 
     # 创单人员
     man = A12_H26[14][1]
@@ -347,6 +369,19 @@ def local_orders():
     return jsonify(result), 200
 
 
+def local_addresses():
+    result = get_addresses
+    # 响应请求
+    return jsonify(result), 200
+
+
+# 路径规划
+def run_tsp():
+    # filename = request.args.get('filename')
+    # tsp.run(filename)
+    return jsonify({}), 200
+
+
 def init_db():
     server_db.init_db()
     return "Database initialized."
@@ -373,12 +408,17 @@ def login():
 
 def sync_data1():
     scheduled_job1_30_d_local()
-    return jsonify({"local job run": "ok"}), 200
+    return jsonify({"scheduled_job1_30_d_local run": "ok"}), 200
 
 
 def sync_data2():
     scheduled_job2_14_d_remote_job()
-    return jsonify({"remote job run": "ok"}), 200
+    return jsonify({"scheduled_job2_14_d_remote_job run": "ok"}), 200
+
+
+def sync_data3():
+    scheduled_job3_update_local_addresses_job()
+    return jsonify({"scheduled_job3_2_min_update_local_addresses_job run": "ok"}), 200
 
 
 @app.errorhandler(Exception)
@@ -417,9 +457,19 @@ app.add_url_rule('/sync1', 'sync1', sync_data1, methods=['GET'])
 
 app.add_url_rule('/sync2', 'sync2', sync_data2, methods=['GET'])
 
+app.add_url_rule('/sync3', 'sync3', sync_data3, methods=['GET'])
+
 app.add_url_rule('/local/orders', 'local_orders', local_orders, methods=['GET'])
 
+# 获取地址信息列表 多了经纬度
+app.add_url_rule('/local/addresses', 'local_addresses', local_addresses, methods=['GET'])
+
+# 获取地名列表
+app.add_url_rule('/local/places', 'get_places', get_places, methods=['GET'])
+
 app.add_url_rule('/remote/orders', 'remote_orders', local_orders, methods=['GET'])
+
+app.add_url_rule('/run/tsp', 'run_tsp', run_tsp, methods=['GET'])
 
 # 注册应用上下文的清理函数
 app.teardown_appcontext(server_db.close_connection)
@@ -438,6 +488,13 @@ def scheduled_job2_14_d_remote_job():
         server_schedule.execute_job_without_transaction(db, constants.JOB_TWO)
 
 
+# 2分钟一次更新远程地址到本地
+def scheduled_job3_update_local_addresses_job():
+    with app.app_context():
+        db = server_db.get_db()
+        server_schedule.scheduled_job3_update_local_addresses_job(db)
+
+
 def init_job():
     # 初始化定时任务
     scheduler = BackgroundScheduler()
@@ -445,6 +502,8 @@ def init_job():
     scheduler.add_job(scheduled_job2_14_d_remote_job, 'cron', hour=2, minute=0)
     # 每隔5分钟一次
     scheduler.add_job(scheduled_job1_30_d_local, 'interval', minutes=2)
+    # 每隔3分钟一次
+    scheduler.add_job(scheduled_job3_update_local_addresses_job, 'interval', minutes=3)
     scheduler.start()
 
 

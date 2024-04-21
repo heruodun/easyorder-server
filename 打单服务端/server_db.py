@@ -1,3 +1,5 @@
+import logging
+
 from flask import g
 import sqlite3
 from datetime import datetime
@@ -81,6 +83,58 @@ def get_orders(limit, offset):
             'sync_status': order[11],
         })
     return result
+
+
+def get_addresses():
+    # 计算分页
+    query = """
+        SELECT id, place, coordinate
+        FROM addresses
+        ORDER BY id
+    """
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute(query, )
+
+    # 取出查询结果
+    items = cursor.fetchall()
+
+    # 格式化输出结果
+    result = []
+    for order in items:
+        result.append({
+            'id': order[0],
+            'place': order[1],
+            'coordinate': order[2],
+        })
+    return result
+
+def insert_or_update_addresses(db_conn, addresses):
+    """
+    批量插入或更新地址记录。
+
+    参数:
+    - db_conn: 数据库连接对象。
+    - addresses: 一个列表，其中每个元素包含(id, place, coordinate)。
+    """
+
+    # 准备SQL语句，INSERT OR REPLACE 语句会根据记录是否存在(id相同)来决定是插入还是更新
+    sql = '''INSERT OR REPLACE INTO addresses (id, place, coordinate) 
+             VALUES (?, ?, ?)'''
+
+    # 使用cursor对象执行批量插入或更新操作
+    cursor = db_conn.cursor()
+    try:
+        cursor.executemany(sql, addresses)
+        db_conn.commit()  # 提交事务，确保变更保存到数据库
+        logging.info(f"{cursor.rowcount} records inserted/updated successfully.")
+        return 0
+    except sqlite3.Error as e:
+        logging.error(f"An error occurred: {e}")
+        db_conn.rollback()  # 如果出现错误，回滚事务
+        return -1
+
+    cursor.close()
 
 
 def get_order_ids_by_status(db, status, print_time_before, print_time_after):
@@ -189,13 +243,20 @@ def init_db():
         job_status INTEGER,
         update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
 
+    db.execute(
+        '''CREATE TABLE IF NOT EXISTS addresses (
+        id INTEGER PRIMARY KEY, 
+        place TEXT NOT NULL,
+        coordinate TEXT NOT NULL,
+        update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+
     # 为order_id列创建索引
     db.execute('''CREATE INDEX IF NOT EXISTS idx_order_id ON orders (order_id)''')
     db.execute('''CREATE UNIQUE INDEX IF NOT EXISTS idx_job_type ON jobs (job_type)''')
 
     # 初始化 其他地方不得用Insert
-    job_types = [constants.JOB_ONE, constants.JOB_TWO]
-    init_job_trans(db, job_types)
+    # job_types = [constants.JOB_ONE, constants.JOB_TWO]
+    # init_job_trans(db, job_types)
     db.commit()
     return "Database initialized."
 

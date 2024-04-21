@@ -1,3 +1,5 @@
+import logging
+
 import requests
 import server_db
 import sqlite3
@@ -5,7 +7,7 @@ import server_feishu
 import time
 from datetime import datetime, timedelta
 import constants
-from flask import current_app as app
+from flask import current_app as app, g
 
 
 def execute_job_without_transaction(db, job_type):
@@ -269,3 +271,16 @@ def is_timestamp_older_than_x_days(timestamp_ms, x_days):
 
     # 比较
     return timestamp_date < x_days_ago
+
+
+def scheduled_job3_update_local_addresses_job(db):
+    addresses = server_feishu.read_all_addresses()
+    code = server_db.insert_or_update_addresses(db, addresses)
+    if code == 0:
+        addresses = server_db.get_addresses()
+        place_list = [item['place'] for item in addresses]
+        place_list.sort(key=constants.sort_key)
+        app.config['places'] = place_list
+        logging.info("scheduled_job3_update_local_addresses_job update success")
+    else:
+        logging.error("scheduled_job3_update_local_addresses_job update fail")

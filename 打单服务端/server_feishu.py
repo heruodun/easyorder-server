@@ -198,6 +198,94 @@ def read_users(phone, password):
     return code, name
 
 
+# 分页获取地址 code -1表示失败 0表示成功
+def read_addresses(page_token, page_size):
+    app_id = "cli_a57140de9afb5013"
+    app_secret = "tFYILUQVlsT7U4jDctg7VdwZWIMZYXbs"
+    tenant_access_token = get_tenant_access_token(app_id, app_secret)
+    # 将 page_size 参数转换为字符串
+    page_size_str = str(page_size)
+
+    url = (
+            "https://open.feishu.cn/open-apis/bitable/v1/apps/YfZ0bTG5pahNddsk3VLcTXVwn3o/tables/tblGkLjcHmOfHG1Y/records/search?page_size=" + page_size_str)
+    if page_token:
+        url += "&page_token=" + page_token
+    header = {
+        "content-type": "application/json",
+        "Authorization": f"Bearer {tenant_access_token}"
+    }
+    json = {
+    }
+    response = requests.post(url, headers=header, json=json)
+    return response.json()
+
+
+# 假设items已经从响应中提取出来，像这样：
+# items = response["data"]["items"]
+
+def extract_addresses(items):
+    addresses = []  # 初始化地址列表
+
+    for item in items:
+        try:
+            # 从每个item中提取编号作为id
+            id = item['fields']['编号']
+
+            # 提取并拼接地址名称中的所有text，并去除前后以及中间的所有空格
+            place_parts = [name['text'] for name in item['fields']['地址名称']]
+            place = ''.join(place_parts).replace(' ', '')
+
+            # 提取地址详细信息中的location作为coordinate
+            coordinate = ""
+            if '地址详细信息' in item['fields']:
+                coordinate = item['fields']['地址详细信息']['location']
+
+            # 将提取出的信息构建成一个元组，并添加到addresses列表中
+            address = (id, place, coordinate)
+            addresses.append(address)
+        except Exception as e:
+            app.logger.error(f"An error occurred: {e}")
+
+    return addresses
+
+
+# 调用extract_addresses函数处理items并获取结果
+# addresses_list = extract_addresses(items)
+
+# 输出结果（如果需要的话）
+# for addr in addresses_list:
+#     print(addr)
+
+
+def read_all_addresses():
+    all_addresses = []  # 初始化空列表以收集所有地址
+    has_more = True
+    page_token = None
+    page_size = 400
+    try:
+        # 读取远程web服务获取数据
+        while has_more:
+            response = read_addresses(page_token, page_size)
+            if response["code"] == 0:
+                items = response["data"]["items"]
+                addresses = extract_addresses(items)
+                all_addresses.extend(addresses)  # 将地址添加到列表中
+                has_more = response["data"]["has_more"]
+                app.logger.info("Addresses are " + str(addresses))
+                if has_more:
+                    page_token = response["data"]["page_token"]
+                else:
+                    page_token = None
+            else:
+                has_more = False
+            app.logger.info("Remote service call success with status code: %s", response["code"])
+    except requests.HTTPError as e:
+        app.logger.error(f"An HTTP error occurred: {e}")
+    except Exception as e:
+        app.logger.error(f"An error occurred: {e}")
+    return all_addresses
+
+
 # new_msg_data = {
 #         "order_id":"订单编号",
 #         "record_id":"编号",

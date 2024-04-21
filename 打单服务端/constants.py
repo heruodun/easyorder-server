@@ -1,5 +1,6 @@
-
 import os
+import re
+from pypinyin import lazy_pinyin
 
 # 对接收货或者送货状态删除的天数
 DONE_DELETE_DATA_DAY = 14
@@ -67,9 +68,6 @@ def get_inset_err_msg(code):
         return "长度为空"
 
 
-
-
-
 def get_feishu_table():
     if os.getenv('ORDER_EASY_SERVER_ENV') == 'online':
         return FEISHU_TABLE_NAME_ONLINE
@@ -86,3 +84,14 @@ def get_feishu_chat():
         return FEISHU_TABLE_CHAT_TEST
     else:
         return ""
+
+
+def sort_key(s):
+    # 将字符串中的数字增加前导零填充，以确保数字按数值排序而不是按字符串
+    s = re.sub('\d+', lambda x: x.group().zfill(10), s)
+    # 使用 pypinyin 库将字符串转换为拼音，未能识别的部分（如数字）将保持原样
+    return lazy_pinyin(s)
+
+
+# 对列表进行排序
+
