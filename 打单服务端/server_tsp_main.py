@@ -2,29 +2,29 @@ from sys import argv
 
 import numpy as np
 
-from server_tsp_io_helper import read_tsp, normalize
+from server_tsp_io_helper import read_tsp_from_data, normalize
 from server_tsp_neuron import generate_network, get_neighborhood, get_route
 from server_tsp_distance import select_closest, euclidean_distance, route_distance
-from server_tsp_plot import plot_network, plot_route
+from server_tsp_plot import plot_network2, plot_route
 
 
-def main():
-    if len(argv) != 2:
-        print("Correct use: python src/server_tsp_main.py <filename>.tsp")
-        return -1
+def run(dimension, nodes_data, diagrams_directory):
+    problem = read_tsp_from_data(dimension, nodes_data)
 
-    problem = read_tsp(argv[1])
+    route = som(problem, 10000, diagrams_directory)
 
-    route = som(problem, 100000)
+    print('Route found {}'.format(route))
 
     problem = problem.reindex(route)
+
+    print('Problem reindex {}'.format(route))
 
     distance = route_distance(problem)
 
     print('Route found of length {}'.format(distance))
 
 
-def som(problem, iterations, learning_rate=0.8):
+def som(problem, iterations, diagrams_directory, learning_rate=0.8):
     """Solve the TSP using a Self-Organizing Map."""
 
     # Obtain the normalized set of cities (w/ coord in [0,1])
@@ -55,7 +55,7 @@ def som(problem, iterations, learning_rate=0.8):
 
         # Check for plotting interval
         if not i % 1000:
-            plot_network(cities, network, name='diagrams/{:05d}.png'.format(i))
+            plot_network2(cities, network, name=diagrams_directory + '/{:05d}.png'.format(i))
 
         # Check if any parameter has completely decayed.
         if n < 1:
@@ -69,12 +69,8 @@ def som(problem, iterations, learning_rate=0.8):
     else:
         print('Completed {} iterations.'.format(iterations))
 
-    plot_network(cities, network, name='diagrams/final.png')
+    plot_network2(cities, network, name=diagrams_directory+'/final.png')
 
     route = get_route(cities, network)
-    plot_route(cities, route, 'diagrams/route.png')
+    plot_route(cities, route, diagrams_directory+'/route.png')
     return route
-
-
-if __name__ == '__main__':
-    main()

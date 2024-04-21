@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 
+
 def read_tsp(filename):
     """
     Read a file in .tsp format into a pandas DataFrame
@@ -21,7 +22,7 @@ def read_tsp(filename):
                 dimension = int(line.split()[-1])
             if line.startswith('NODE_COORD_SECTION'):
                 node_coord_start = i
-            i = i+1
+            i = i + 1
 
         print('Problem with {} cities read.'.format(dimension))
 
@@ -41,6 +42,23 @@ def read_tsp(filename):
         # cities.set_index('city', inplace=True)
 
         return cities
+
+
+def read_tsp_from_data(dimension, nodes_data):
+    """
+    Create a pandas DataFrame from given dimension and nodes list
+    dimension: An integer indicating the number of cities
+    nodes_data: A list of tuples/lists where each contains city number, longitude, latitude
+    """
+    print('Problem with {} cities read.'.format(dimension))
+    # Convert nodes_data into a DataFrame
+    cities = pd.DataFrame(nodes_data, columns=['city', 'x', 'y'])  # 注意这里x,y的顺序和原代码中保持一致
+    cities['city'] = cities['city'].astype(str)
+    cities['x'] = cities['x'].astype(np.float64)
+    cities['y'] = cities['y'].astype(np.float64)
+
+    return cities
+
 
 def normalize(points):
     """
