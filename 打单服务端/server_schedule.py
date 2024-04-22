@@ -238,7 +238,7 @@ def process_orders(db, orders):
 
         # update local data
         ok = server_db.update_order(db, cur_status, cur_man, cur_time, order_trace, status, order_id)
-        if ok & status == constants.REMOTE_DATA_TO_BE_DELETE:
+        if ok and (status == constants.REMOTE_DATA_TO_BE_DELETE):
             orders_to_delete.append(record_id)
 
     # end for
