@@ -55,6 +55,9 @@ INSERT_ERROR_CODE_4 = 10004
 INSERT_ERROR_CODE_5 = 10005
 
 
+START_ADDRESS_ID = 1030
+
+
 def get_inset_err_msg(code):
     if code == INSERT_ERROR_CODE_1:
         return "总条数不正确"

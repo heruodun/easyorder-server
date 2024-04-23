@@ -85,6 +85,42 @@ def get_orders(limit, offset):
     return result
 
 
+def query_addresses_by_ids(ids=None):
+    query = """
+        SELECT id, place, coordinate
+        FROM addresses
+    """
+    if ids:
+        query += " WHERE id IN ({})".format(", ".join(["?"] * len(ids)))
+    db = get_db()
+
+    logging.info(str(query))
+    logging.info(str(ids))
+
+    cursor = db.cursor()
+    cursor.execute(query, ids if ids else ())
+    logging.info(str("execute"))
+    items = cursor.fetchall()
+    logging.info(str("fetchall"))
+
+    result = []
+    for index, item in enumerate(items):
+        id_, place, coordinate = item
+
+        # 检查coordinate是否包含逗号，以分割为longitude和latitude；
+        # 如果不符合预期，可以设置默认值或进行其他处理
+        if ',' in coordinate:
+            longitude, latitude = coordinate.split(',')
+        else:
+            # 定义一种错误处理方式，例如使用默认值
+            longitude, latitude = '0', '0'  # 或使用None, None等
+
+        result.append((index, float(longitude), float(latitude), id_, place))
+    return result
+
+
+
+
 def get_addresses():
     # 计算分页
     query = """

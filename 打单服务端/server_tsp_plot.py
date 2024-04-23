@@ -41,11 +41,11 @@ def plot_network2(cities, neurons, name='diagram.png', ax=None):
 
         # 在每个城市旁边添加较小的索引
         for i, txt in enumerate(cities.index):
-            axis.annotate(txt, (cities['x'].iloc[i], cities['y'].iloc[i]),
+            axis.annotate(txt+1, (cities['x'].iloc[i], cities['y'].iloc[i]),
                           textcoords="offset points",
                           xytext=(0, 5),
                           ha='center',
-                          fontsize=6)  # 调整字体大小
+                          fontsize=4)  # 调整字体大小
 
         plt.savefig(name, bbox_inches='tight', pad_inches=0, dpi=200)
         plt.close()
@@ -55,11 +55,11 @@ def plot_network2(cities, neurons, name='diagram.png', ax=None):
 
         # 在每个城市旁边添加较小的索引
         for i, txt in enumerate(cities.index):
-            ax.annotate(txt, (cities['x'].iloc[i], cities['y'].iloc[i]),
+            ax.annotate(txt+1, (cities['x'].iloc[i], cities['y'].iloc[i]),
                         textcoords="offset points",
                         xytext=(0, 5),
                         ha='center',
-                        fontsize=6)  # 调整字体大小
+                        fontsize=4)  # 调整字体大小
 
         return ax
 
