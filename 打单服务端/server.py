@@ -14,10 +14,12 @@ import server_feishu
 import sqlite3
 import server_schedule
 from apscheduler.schedulers.background import BackgroundScheduler
+from flask_cors import CORS
 
 import server_tsp_main
 
 app = Flask(__name__)
+CORS(app, resources={r"/*": {"origins": "*"}})
 version = "1.0.0"
 
 app.config['places'] = None
