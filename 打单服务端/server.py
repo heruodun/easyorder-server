@@ -15,6 +15,7 @@ import sqlite3
 import server_schedule
 from apscheduler.schedulers.background import BackgroundScheduler
 from flask_cors import CORS
+import server_search
 
 import server_tsp_main
 
@@ -24,6 +25,7 @@ version = "1.0.0"
 
 app.config['places'] = None
 app.config['JSON_AS_ASCII'] = False  # 确保JSON支持中文
+
 
 def init_logger():
     # 获取exe文件（或脚本）的当前路径
@@ -379,6 +381,14 @@ def local_addresses():
     return jsonify(result), 200
 
 
+def local_address_fsearch():
+    keyword = request.args.get('key', '')  # 默认为空字符串
+    app.logger.info(get_places())
+    result = server_search.search(keyword, get_places())
+    app.logger.info(f"key is {keyword}, value is {result}")
+    return {"result": list(result)}
+
+
 # 路径规划
 def run_tsp():
     addressid = request.args.get('addressid', '')  # 默认为空字符串
@@ -491,6 +501,8 @@ app.add_url_rule('/local/orders', 'local_orders', local_orders, methods=['GET'])
 
 # 获取地址信息列表 多了经纬度
 app.add_url_rule('/local/addresses', 'local_addresses', local_addresses, methods=['GET'])
+# 模糊查询地址 hz->hz11、hz、杭州大厦、浙江杭州
+app.add_url_rule('/local/address/fsearch', 'local_address_fsearch', local_address_fsearch, methods=['GET'])
 
 # 获取地名列表
 app.add_url_rule('/local/places', 'get_places', get_places, methods=['GET'])
