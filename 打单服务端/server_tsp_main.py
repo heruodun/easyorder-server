@@ -74,7 +74,7 @@ def split_node_data(node_data):
 
         # 构建新的元组，并将它们添加到对应的数组中
         array1.append((index, longitude, latitude))
-        array2.append((index, address_id, place))
+        array2.append((index, address_id, place, longitude, latitude))
 
     # 返回拆分后的两个数组
     return array1, array2
