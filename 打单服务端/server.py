@@ -396,12 +396,12 @@ def run_tsp():
         ids = addressid.split(',')
         # (index, 经度, 纬度, address_id, 地址名称)
         nodes_data = server_db.query_addresses_by_ids(ids)
-        logging.info(str(nodes_data))
-        route = server_tsp_main.run(len(nodes_data), nodes_data, init_tsp())
-        return route, 200
-
     else:
-        return {"error": "No addressid provided"}, 400
+        nodes_data = server_db.query_all_valid_addresses()
+    logging.info(str(nodes_data))
+    route = server_tsp_main.run(len(nodes_data), nodes_data, init_tsp())
+    return route, 200
+
 
 
 def init_tsp():

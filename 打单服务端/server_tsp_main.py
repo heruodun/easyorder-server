@@ -11,6 +11,9 @@ from flask import current_app as app
 # node_data (index, 经度, 纬度, address_id, 地址名称)
 # todo 注意判断坐标是否合法
 def run(dimension, nodes_data, diagrams_directory):
+
+    print(nodes_data)
+
     coordinate_data, address_data = split_node_data(nodes_data)
 
     app.logger.info(f"request dimension {dimension} \ncoordinate_data {coordinate_data}, \naddress_data {address_data}")

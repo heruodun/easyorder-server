@@ -50,6 +50,7 @@ def get_order_by_id(order_id):
     order = order_cursor.fetchone()
     return order
 
+
 def get_orders(limit, offset):
     # 计算分页
     query = """
@@ -119,6 +120,31 @@ def query_addresses_by_ids(ids=None):
     return result
 
 
+def query_all_valid_addresses():
+    # 计算分页
+    query = """
+        SELECT id, place, coordinate
+        FROM addresses
+        ORDER BY id
+    """
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute(query, )
+
+    # 取出查询结果
+    items = cursor.fetchall()
+
+    result = []
+    index = 0  # 初始化index为0
+    for item in items:
+        id_, place, coordinate = item
+        # 检查coordinate是否包含逗号，以分割为longitude和latitude；
+        # 如果不符合预期，可以设置默认值或进行其他处理
+        if ',' in coordinate:
+            longitude, latitude = coordinate.split(',')
+            result.append((index, float(longitude), float(latitude), id_, place))
+            index = index + 1  # 如果上述条件成立，则index自增1
+    return result
 
 
 def get_addresses():
@@ -144,6 +170,7 @@ def get_addresses():
             'coordinate': order[2],
         })
     return result
+
 
 def insert_or_update_addresses(db_conn, addresses):
     """
