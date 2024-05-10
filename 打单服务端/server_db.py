@@ -262,6 +262,82 @@ def finish_job(db):
     print("Job finished.")
 
 
+def get_orders_by_wave_ids(wave_ids):
+    db = get_db()  # 假设这个函数已经定义好，返回数据库连接
+    order_map = {} #<wave_id, order>
+
+    if not wave_ids:
+        # 如果 wave_ids 为空，则直接返回空字典
+        return order_map
+
+    # 使用tuple(wave_ids)确保参数是一个元组，即使wave_ids只有一个元素
+    placeholders = ','.join(['?'] * len(wave_ids))  # 构建所需的SQL参数占位符字符串
+    sql = f"SELECT * FROM orders WHERE wave_id IN ({placeholders}) ORDER BY order_id DESC"
+
+    cur = db.cursor()
+    cur.execute(sql, tuple(wave_ids))
+    print(tuple(wave_ids))
+    for order in cur.fetchall():
+        wave_id = order['wave_id']  # 假设 order 字典里有 'wave_id' 键
+        order_entity = {
+            'id': order[0],
+            'order_id': order[1],
+            'address': order[2],
+            'content': order[3],
+            'cur_status': order[4],
+            'cur_man': order[5],
+            'cur_time': order[6],
+            'printer': order[7],
+            'print_time': order[8],
+            'order_trace': order[9],
+            'update_time': order[10],
+            'sync_status': order[11],
+            'wave_id': order[12],
+        }
+
+        if wave_id not in order_map:
+            order_map[wave_id] = []
+        order_map[wave_id].append(order_entity)  # 将此订单添加到相应 wave_id 的列表中
+
+    cur.close()
+    return order_map
+
+
+def update_order_wave(wave_id, cur_status, cur_time, cur_man, order_trace, wave_alias, order_id):
+    db = get_db()
+    cur = db.cursor()
+
+    # 准备SQL更新语句
+    update_sql = ''' 
+    UPDATE orders 
+    SET wave_id = ?, 
+        cur_status = ?, 
+        cur_time = ?, 
+        cur_man = ?, 
+        order_trace = ?
+    WHERE order_id = ?
+    '''
+
+    # 执行更新
+    try:
+        cur.execute(update_sql,
+                    (wave_id, cur_status, cur_time, cur_man, order_trace, order_id))
+        db.commit()
+
+    except sqlite3.Error as e:
+        print(f'Database error: {e}')
+        # 在此处处理任何数据库相关的异常
+    except Exception as e:
+        print(f'Exception in _query: {e}')
+        # 在此处处理其他异常
+    if cur.rowcount > 0:
+        # 如果影响的行数大于零，认为更新成功
+        return 1
+    else:
+        # 没有行被更新，可能是因为指定的order_id不存在
+        return -1
+
+
 def init_db():
     print("init db")
     db = get_db()
@@ -312,6 +388,18 @@ def init_db():
         place TEXT NOT NULL,
         coordinate TEXT NOT NULL,
         update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+
+    try:
+        db.execute(
+            '''
+            ALTER TABLE orders ADD COLUMN wave_id INTEGER;
+            '''
+        )
+    except Exception as e:
+        print(f'Exception in _query: {e}')
+
+
+    db.execute('''CREATE INDEX IF NOT EXISTS idx_wave_id ON orders (wave_id)''')
 
     # 为order_id列创建索引
     db.execute('''CREATE INDEX IF NOT EXISTS idx_order_id ON orders (order_id)''')

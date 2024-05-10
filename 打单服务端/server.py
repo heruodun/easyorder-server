@@ -1,3 +1,4 @@
+import datetime
 import logging
 import os
 import sys
@@ -402,9 +403,8 @@ def run_tsp():
     logging.info(str(nodes_data))
     route = server_tsp_main.run(len(nodes_data), nodes_data, init_tsp())
     t2 = time.time()
-    print(t2-t1)
+    print(t2 - t1)
     return route, 200
-
 
 
 def init_tsp():
@@ -475,6 +475,95 @@ def send_notification(err_message):
     server_feishu.send_one_alert_message('Application Error Alert' + err_message)
 
 
+def call_remote_update_service_async(wave_id, cur_status, cur_time, cur_man, new_order_trace, wave_alias, order_id):
+    server_feishu.update_feishu_async(wave_id, cur_status, cur_time, cur_man, new_order_trace, wave_alias, order_id)
+
+
+def wave_operation():
+    data = request.get_json()
+    wave_id = data['wave_id']
+    wave_alias = data['wave_alias']
+    order_id = data['order_id']
+    operation_code = data['operation']  # '加入 为 1 ' or '撤出 -1'
+    cur_man = data['operator']
+
+    print("update wave" + str(wave_id) + " " + str(order_id) + " " + cur_man)
+
+    # 逻辑处理
+    # 获取订单数据
+    order_data = server_db.get_order_by_id(order_id)
+    if not order_data:
+        return jsonify({'code': 1, 'msg': '订单不存在'}), 200
+    if order_data['cur_status'] == '送货':
+        return jsonify({'code': 1, 'msg': '订单已经送货，不允许修改波次'}), 200
+
+    # 更新DB参数准备
+    if operation_code == -1:
+        wave_id = 0
+        operation = '撤出'
+    else:
+        operation = '加入'
+
+    current_timestamp = time.time()
+    timestamp_ms = int(current_timestamp * 1000)
+
+    # 将时间戳转换为本地时间的 struct_time 对象
+    local_time = time.localtime(current_timestamp)
+    formatted_time = time.strftime("%Y-%m-%d %H:%M:%S", local_time)
+
+    order_trace = order_data['order_trace'] if order_data['order_trace'] else ''
+    new_order_trace = f"{order_trace}\n\n拣货人：{cur_man}，{operation}波次{wave_id}时间：{formatted_time}"
+    cur_status = '拣货'
+
+    # DB操作
+    status = server_db.update_order_wave(wave_id, cur_status, timestamp_ms, cur_man, new_order_trace, wave_alias,
+                                         order_id)
+    if status > 1:
+        # server_feishu.update_feishu_async()
+        thread = threading.Thread(target=call_remote_update_service_async, args=(wave_id, cur_status, timestamp_ms, cur_man,
+                                                                                 new_order_trace, wave_alias,
+                                                                                 order_id,))
+        thread.start()
+
+        print("start update wave in feishu " + str(wave_id) + " " + str(order_id))
+    else:
+        return jsonify({'code': 1, 'msg': '更新失败'}), 200
+    # 如果一切OK
+    return jsonify({'code': 0, 'msg': 'ok'}), 200
+
+
+def wave_address_orders():
+    wave_ids = request.get_json()  # 从请求体获取波次ID
+    order_map = server_db.get_orders_by_wave_ids(wave_ids)  # 从数据库获取波次ID的订单
+    orders_grouped_by_address = {}
+
+    response = {"waves": {}}
+    for wave_id, orders in order_map.items():
+        totalCount = len(orders)  # 计算当前 wave_id 下的订单总数
+        addressCount = 0
+        response["waves"][wave_id] = {"totalCount": totalCount, "addressCount": addressCount, "addresses": []}
+
+        address_dict = {}  # 用于临时存储每个地址的订单列表
+
+        for order in orders:
+            address = order['address']
+            if address not in address_dict:
+                address_dict[address] = []
+            address_dict[address].append(order)
+        response["waves"][wave_id]["addressCount"] = len(address_dict)
+
+        for address, orders_at_address in address_dict.items():
+            orderCount = len(orders_at_address)  # 计算每个地址下订单的数量
+            response["waves"][wave_id]["addresses"].append({
+                "address": address,
+                "orderCount": orderCount,
+                "orders": orders_at_address
+            })
+
+    print(response)
+    return jsonify(response), 200  # 解析 response 对象为 JSON 响应并返回
+
+
 @app.route('/health')
 def health_check():
     return 'OK', 200
@@ -501,6 +590,10 @@ app.add_url_rule('/sync2', 'sync2', sync_data2, methods=['GET'])
 app.add_url_rule('/sync3', 'sync3', sync_data3, methods=['GET'])
 
 app.add_url_rule('/local/orders', 'local_orders', local_orders, methods=['GET'])
+
+app.add_url_rule('/wave/operation', 'wave_operation', wave_operation, methods=['POST'])
+
+app.add_url_rule('/wave/orders', 'wave_address_orders', wave_address_orders, methods=['POST'])
 
 # 获取地址信息列表 多了经纬度
 app.add_url_rule('/local/addresses', 'local_addresses', local_addresses, methods=['GET'])
@@ -543,10 +636,10 @@ def init_job():
     scheduler = BackgroundScheduler()
     # 每天凌晨2点执行
     scheduler.add_job(scheduled_job2_14_d_remote_job, 'cron', hour=2, minute=0)
-    # 每隔5分钟一次
-    scheduler.add_job(scheduled_job1_30_d_local, 'interval', minutes=2)
-    # 每隔3分钟一次
-    scheduler.add_job(scheduled_job3_update_local_addresses_job, 'interval', minutes=3)
+    # # 每隔5分钟一次
+    # scheduler.add_job(scheduled_job1_30_d_local, 'interval', minutes=2)
+    # # 每隔3分钟一次
+    # scheduler.add_job(scheduled_job3_update_local_addresses_job, 'interval', minutes=3)
     scheduler.start()
 
 
