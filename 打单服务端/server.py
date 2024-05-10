@@ -391,6 +391,7 @@ def local_address_fsearch():
 
 # 路径规划
 def run_tsp():
+    t1 = time.time()
     addressid = request.args.get('addressid', '')  # 默认为空字符串
     if addressid:
         ids = addressid.split(',')
@@ -400,6 +401,8 @@ def run_tsp():
         nodes_data = server_db.query_all_valid_addresses()
     logging.info(str(nodes_data))
     route = server_tsp_main.run(len(nodes_data), nodes_data, init_tsp())
+    t2 = time.time()
+    print(t2-t1)
     return route, 200
 
 
