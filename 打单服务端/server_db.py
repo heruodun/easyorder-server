@@ -226,6 +226,20 @@ def update_order(db, cur_status, cur_man, cur_time, order_trace, sync_status, or
         return False
 
 
+def update_order_trace(db, order_trace, order_id):
+    # 更新本地数据库中的订单数据
+    cursor = db.cursor()
+    cursor.execute('''UPDATE orders SET order_trace = ? WHERE order_id = ?''', (order_trace, order_id))
+    db.commit()
+    # 检查更新的行数
+    if cursor.rowcount > 0:
+        # 如果影响的行数大于零，认为更新成功
+        return True
+    else:
+        # 没有行被更新，可能是因为指定的order_id不存在
+        return False
+
+
 def update_order_status(db, sync_status, order_id):
     cursor = db.cursor()
     # 更新本地数据库中的订单数据
@@ -264,7 +278,7 @@ def finish_job(db):
 
 def get_orders_by_wave_ids(wave_ids):
     db = get_db()  # 假设这个函数已经定义好，返回数据库连接
-    order_map = {} #<wave_id, order>
+    order_map = {}  # <wave_id, order>
 
     if not wave_ids:
         # 如果 wave_ids 为空，则直接返回空字典
@@ -303,7 +317,7 @@ def get_orders_by_wave_ids(wave_ids):
     return order_map
 
 
-def update_order_wave(wave_id, cur_status, cur_time, cur_man, order_trace, wave_alias, order_id):
+def update_order_wave(wave_id, cur_status, cur_time, cur_man, order_trace, order_id):
     db = get_db()
     cur = db.cursor()
 
@@ -397,7 +411,6 @@ def init_db():
         )
     except Exception as e:
         print(f'Exception in _query: {e}')
-
 
     db.execute('''CREATE INDEX IF NOT EXISTS idx_wave_id ON orders (wave_id)''')
 

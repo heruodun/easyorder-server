@@ -475,17 +475,30 @@ def send_notification(err_message):
     server_feishu.send_one_alert_message('Application Error Alert' + err_message)
 
 
-def call_remote_update_service_async(wave_id, cur_status, cur_time, cur_man, new_order_trace, wave_alias, order_id):
-    server_feishu.update_feishu_async(wave_id, cur_status, cur_time, cur_man, new_order_trace, wave_alias, order_id)
+def call_remote_update_service_async(wave_id, wave_create_time, cur_time, cur_man, jianhuo_order_trace, order_id):
+
+    ids_batch = [order_id]
+    response_data = server_feishu.read_records_by_order_ids(ids_batch)
+    if response_data['code'] == 0:
+        # 若成功获取响应，遍历 response_data 获取每个订单ID的存在性
+        for order in response_data['data']['items']:
+            order_trace = order["fields"]["总体进度"][0]["text"]
+            new_order_trace = f"{order_trace}\n\n{jianhuo_order_trace}"
+            with app.app_context():
+                db = server_db.get_db()
+                ok = server_db.update_order_trace(db, new_order_trace, order_id)
+                if ok:
+                    server_feishu.update_feishu_async(wave_id, wave_create_time, cur_time, cur_man, new_order_trace,
+                                                      order_id)
 
 
 def wave_operation():
     data = request.get_json()
     wave_id = data['wave_id']
-    wave_alias = data['wave_alias']
     order_id = data['order_id']
     operation_code = data['operation']  # '加入 为 1 ' or '撤出 -1'
     cur_man = data['operator']
+    wave_create_time = data['wave_create_time']
 
     print("update wave" + str(wave_id) + " " + str(order_id) + " " + cur_man)
 
@@ -493,9 +506,9 @@ def wave_operation():
     # 获取订单数据
     order_data = server_db.get_order_by_id(order_id)
     if not order_data:
-        return jsonify({'code': 1, 'msg': '订单不存在'}), 200
+        return jsonify({'code': 1, 'msg': '订单不存在'}), 400
     if order_data['cur_status'] == '送货':
-        return jsonify({'code': 1, 'msg': '订单已经送货，不允许修改波次'}), 200
+        return jsonify({'code': 1, 'msg': '订单已经送货，不允许修改波次'}), 403
 
     # 更新DB参数准备
     if operation_code == -1:
@@ -512,22 +525,27 @@ def wave_operation():
     formatted_time = time.strftime("%Y-%m-%d %H:%M:%S", local_time)
 
     order_trace = order_data['order_trace'] if order_data['order_trace'] else ''
-    new_order_trace = f"{order_trace}\n\n拣货人：{cur_man}，{operation}波次{wave_id}时间：{formatted_time}"
+
+
+
+    new_order_trace = f"{order_trace}\n\n拣货人：{cur_man}，{operation}波次{data['wave_id']}时间：{formatted_time}"
     cur_status = '拣货'
 
     # DB操作
-    status = server_db.update_order_wave(wave_id, cur_status, timestamp_ms, cur_man, new_order_trace, wave_alias,
+    status = server_db.update_order_wave(wave_id, cur_status, timestamp_ms, cur_man, new_order_trace,
                                          order_id)
-    if status > 1:
+    jianhuo_order_trace = f"拣货人：{cur_man}，{operation}波次{data['wave_id']}时间：{formatted_time}"
+
+    if status == 1:
         # server_feishu.update_feishu_async()
-        thread = threading.Thread(target=call_remote_update_service_async, args=(wave_id, cur_status, timestamp_ms, cur_man,
-                                                                                 new_order_trace, wave_alias,
+        thread = threading.Thread(target=call_remote_update_service_async, args=(wave_id, wave_create_time, timestamp_ms,
+                                                                                 cur_man, jianhuo_order_trace,
                                                                                  order_id,))
         thread.start()
 
         print("start update wave in feishu " + str(wave_id) + " " + str(order_id))
     else:
-        return jsonify({'code': 1, 'msg': '更新失败'}), 200
+        return jsonify({'code': 1, 'msg': '更新失败'}), 500
     # 如果一切OK
     return jsonify({'code': 0, 'msg': 'ok'}), 200
 
@@ -636,10 +654,10 @@ def init_job():
     scheduler = BackgroundScheduler()
     # 每天凌晨2点执行
     scheduler.add_job(scheduled_job2_14_d_remote_job, 'cron', hour=2, minute=0)
-    # # 每隔5分钟一次
-    # scheduler.add_job(scheduled_job1_30_d_local, 'interval', minutes=2)
-    # # 每隔3分钟一次
-    # scheduler.add_job(scheduled_job3_update_local_addresses_job, 'interval', minutes=3)
+    # 每隔5分钟一次
+    scheduler.add_job(scheduled_job1_30_d_local, 'interval', minutes=2)
+    # 每隔3分钟一次
+    scheduler.add_job(scheduled_job3_update_local_addresses_job, 'interval', minutes=3)
     scheduler.start()
 
 

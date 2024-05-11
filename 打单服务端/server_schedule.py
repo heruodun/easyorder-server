@@ -214,30 +214,8 @@ def scheduled_job2_delete_feishu_update_local(db):
 def process_orders(db, orders):
     orders_to_delete = []  # 用于收集需要从远程服务中删除的订单
     for order in orders:
-        creation_time = order["fields"]["打单时间"]
-        cur_time = order["fields"]["当前处理时间"]
-        cur_status = order["fields"]["当前进度"]
-        cur_man = order["fields"]["当前处理人"][0]["text"]
-        order_trace = order["fields"]["总体进度"][0]["text"]
-        order_id = order["fields"]["订单编号"]
         record_id = order["record_id"]
-        # update local data
-        # process local data sync status
-        status = constants.REMOTE_DATA_UPDATE_LOCAL
-
-        if cur_status == constants.DELIVERY:
-            status = constants.REMOTE_DATA_CAN_BE_DELETE
-
-        # 创建时间超过一定的天数订单且状态是送货中 从远程删除掉
-        if is_timestamp_older_than_x_days(creation_time, constants.DONE_DELETE_DATA_DAY):
-            if (cur_status == constants.DELIVERY) or (cur_status == constants.RECEIVE):
-                status = constants.REMOTE_DATA_TO_BE_DELETE
-
-        if is_timestamp_older_than_x_days(creation_time, constants.ALL_DELETE_DATA_DAY):
-            status = constants.REMOTE_DATA_TO_BE_DELETE
-
-        # update local data
-        ok = server_db.update_order(db, cur_status, cur_man, cur_time, order_trace, status, order_id)
+        ok, status = update_local_from_remote(db, order)
         if ok and (status == constants.REMOTE_DATA_TO_BE_DELETE):
             orders_to_delete.append(record_id)
 
@@ -248,6 +226,36 @@ def process_orders(db, orders):
         app.logger.info(f"end delete orders > 14 days or > 30days {orders_to_delete} from remote service")
     else:
         app.logger.info(f"orders > 14 days or > 30days is none from remote service")
+
+
+def update_local_from_remote(db, order):
+    creation_time = order["fields"]["打单时间"]
+    cur_time = order["fields"]["当前处理时间"]
+    cur_status = order["fields"]["当前进度"]
+    cur_man = order["fields"]["当前处理人"][0]["text"]
+    order_trace = order["fields"]["总体进度"][0]["text"]
+    order_id = order["fields"]["订单编号"]
+
+    # update local data
+    # process local data sync status
+    status = constants.REMOTE_DATA_UPDATE_LOCAL
+
+    if cur_status == constants.DELIVERY:
+        status = constants.REMOTE_DATA_CAN_BE_DELETE
+
+    # 创建时间超过一定的天数订单且状态是送货中 从远程删除掉
+    if is_timestamp_older_than_x_days(creation_time, constants.DONE_DELETE_DATA_DAY):
+        if (cur_status == constants.DELIVERY) or (cur_status == constants.RECEIVE):
+            status = constants.REMOTE_DATA_TO_BE_DELETE
+
+    if is_timestamp_older_than_x_days(creation_time, constants.ALL_DELETE_DATA_DAY):
+        status = constants.REMOTE_DATA_TO_BE_DELETE
+
+    # update local data
+    ok = server_db.update_order(db, cur_status, cur_man, cur_time, order_trace, status, order_id)
+
+    return ok, status
+
 
 
 def is_timestamp_older_than_x_days(timestamp_ms, x_days):

@@ -1,4 +1,6 @@
 import json
+import time
+
 import requests
 import constants
 from server import app
@@ -15,37 +17,34 @@ def get_tenant_access_token(app_id, app_secret):
     return r.json()["tenant_access_token"]
 
 
-def update_feishu_async(wave_id, cur_status, cur_time, cur_man, order_trace, wave_alias, order_id):
-    ids_batch = []
-    ids_batch.append(order_id)
+def update_feishu_async(wave_id, wave_create_time, cur_time, cur_man, order_trace, order_id):
+    ids_batch = [order_id]
     response_data = read_records_by_order_ids(ids_batch)
     if response_data['code'] == 0:
         # 若成功获取响应，遍历 response_data 获取每个订单ID的存在性
         for item in response_data['data']['items']:
-            record_id = item['']
+            record_id = item['record_id']
+
+            time_str = time.strptime(wave_create_time, "%Y-%m-%d %H:%M:%S")
+            wave_create_time_timestamp = time.mktime(time_str) * 1000
+
             record_data = {
+                "fields": {
+                    "当前处理人": cur_man,
+                    "当前处理时间": cur_time,
+                    "总体进度": order_trace,
+                    "波次编号": wave_id,
+                    "波次创建时间": wave_create_time_timestamp
+                }
 
             }
-
-            do_update_wave(record_data)
-
-
-#
-# # 需要获取当前时间的格式化字符串
-# current_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-#
-# # 随机数据作为范例用于测试使用
-# update_order(
-#     wave_id=123,
-#     cur_status='拣货',
-#     cur_time=current_time,
-#     cur_man='操作员A',
-#     order_trace='这里是变更后的订单追踪记录',
-#     wave_alias='波次别名',
-#     order_data={'order_id': 456}
+            app.logger.info("update_feishu_async wave request data %s", record_data)
+            response = do_update_wave(record_data, record_id)
+            app.logger.info("update_feishu_async wave response data %s", response)
+            print(response)
 
 
-def do_update_wave(record_data):
+def do_update_wave(record_data, record_id):
     app_id = "cli_a57140de9afb5013"
     app_secret = "tFYILUQVlsT7U4jDctg7VdwZWIMZYXbs"
     tenant_access_token = get_tenant_access_token(app_id, app_secret)
@@ -53,12 +52,12 @@ def do_update_wave(record_data):
     feishu_table = constants.get_feishu_table()
 
     url_write = ("https://open.feishu.cn/open-apis/bitable/v1/apps/SF79bwJc6awjy5sRrQAcSTzNn9L/tables/"
-                 + feishu_table + "/records")
+                 + feishu_table + "/records/" + record_id)
     header = {
         "content-type": "application/json",
         "Authorization": f"Bearer {tenant_access_token}"
     }
-    r_write = requests.post(url_write, headers=header, json=record_data)
+    r_write = requests.put(url_write, headers=header, json=record_data)
     return r_write.json()
 
 
