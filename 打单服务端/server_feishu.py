@@ -17,7 +17,7 @@ def get_tenant_access_token(app_id, app_secret):
     return r.json()["tenant_access_token"]
 
 
-def update_feishu_async(wave_id, wave_create_time, cur_time, cur_man, order_trace, order_id):
+def update_feishu_async(wave_id, wave_create_time, cur_time, cur_man, cur_process, order_trace, order_id):
     ids_batch = [order_id]
     response_data = read_records_by_order_ids(ids_batch)
     if response_data['code'] == 0:
@@ -32,6 +32,7 @@ def update_feishu_async(wave_id, wave_create_time, cur_time, cur_man, order_trac
                 "fields": {
                     "当前处理人": cur_man,
                     "当前处理时间": cur_time,
+                    "当前进度": cur_process,
                     "总体进度": order_trace,
                     "波次编号": wave_id,
                     "波次创建时间": wave_create_time_timestamp
