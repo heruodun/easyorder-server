@@ -351,6 +351,40 @@ def update_order_wave(wave_id, cur_status, cur_time, cur_man, order_trace, order
         # 没有行被更新，可能是因为指定的order_id不存在
         return -1
 
+def update_local_order(cur_status, cur_time, cur_man, order_trace, order_id):
+    db = get_db()
+    cur = db.cursor()
+
+    # 准备SQL更新语句
+    update_sql = ''' 
+    UPDATE orders 
+    SET cur_status = ?, 
+        cur_time = ?, 
+        cur_man = ?, 
+        order_trace = ?
+    WHERE order_id = ?
+    '''
+
+    # 执行更新
+    try:
+        cur.execute(update_sql,
+                    (cur_status, cur_time, cur_man, order_trace, order_id))
+        db.commit()
+
+    except sqlite3.Error as e:
+        print(f'Database error: {e}')
+        # 在此处处理任何数据库相关的异常
+    except Exception as e:
+        print(f'Exception in _query: {e}')
+        # 在此处处理其他异常
+    if cur.rowcount > 0:
+        # 如果影响的行数大于零，认为更新成功
+        return 1
+    else:
+        # 没有行被更新，可能是因为指定的order_id不存在
+        return -1
+
+
 
 def init_db():
     print("init db")

@@ -475,8 +475,8 @@ def send_notification(err_message):
     server_feishu.send_one_alert_message('Application Error Alert' + err_message)
 
 
-def call_remote_update_service_async(wave_id, wave_create_time, cur_time, cur_man, cur_status,  jianhuo_order_trace, order_id):
-
+def call_remote_update_service_async(wave_id, wave_create_time, cur_time, cur_man, cur_status, jianhuo_order_trace,
+                                     order_id):
     ids_batch = [order_id]
     response_data = server_feishu.read_records_by_order_ids(ids_batch)
     if response_data['code'] == 0:
@@ -488,8 +488,61 @@ def call_remote_update_service_async(wave_id, wave_create_time, cur_time, cur_ma
                 db = server_db.get_db()
                 ok = server_db.update_order_trace(db, new_order_trace, order_id)
                 if ok:
-                    server_feishu.update_feishu_async(wave_id, wave_create_time, cur_time, cur_man, cur_status, new_order_trace,
-                                                      order_id)
+                    server_feishu.update_feishu_wave_async(wave_id, wave_create_time, cur_time, cur_man, cur_status,
+                                                           new_order_trace,
+                                                           order_id)
+
+
+def call_remote_update_order_service_async(cur_time, cur_man, cur_status, local_order_trace, order_id):
+    ids_batch = [order_id]
+    print(ids_batch)
+    response_data = server_feishu.read_records_by_order_ids(ids_batch)
+    print("call_remote_update_order_service_async ")
+    if response_data['code'] == 0:
+        print("response_data = 0 ")
+        # 若成功获取响应，遍历 response_data 获取每个订单ID的存在性
+        for order in response_data['data']['items']:
+            order_trace = order["fields"]["总体进度"][0]["text"]
+            new_order_trace = f"{order_trace}\n\n{local_order_trace}"
+            print("response_data = 0 " + new_order_trace)
+            with app.app_context():
+                db = server_db.get_db()
+                ok = server_db.update_order_trace(db, new_order_trace, order_id)
+                if ok:
+                    print("update_feishu_order_async ")
+                    server_feishu.update_feishu_order_async(cur_time, cur_man, cur_status, new_order_trace,
+                                                            order_id)
+
+
+def order_operation_by_wave():
+    data = request.get_json()
+    wave_id = data['wave_id']
+    cur_man = data['operator']
+
+    current_timestamp = time.time()
+    timestamp_ms = int(current_timestamp * 1000)
+
+    # 将时间戳转换为本地时间的 struct_time 对象
+    local_time = time.localtime(current_timestamp)
+    formatted_time = time.strftime("%Y-%m-%d %H:%M:%S", local_time)
+
+    # 逻辑处理
+    # 获取订单数据
+    wave_ids = [wave_id]
+    order_data = server_db.get_orders_by_wave_ids(wave_ids)
+    # 获取订单数据
+    if order_data:
+        print(order_data)
+        for wave_id, orders in order_data.items():
+            print(orders)
+            for order in orders:
+
+                local_order_trace = f"送货人：{cur_man}，送货时间：{formatted_time}"
+                call_remote_update_order_service_async(timestamp_ms, cur_man, "送货", local_order_trace,
+                                                       order['order_id'])
+        return jsonify({'code': 0, 'msg': '更新成功'}), 200
+    else:
+        return jsonify({'code': 1, 'msg': '订单不存在'}), 400
 
 
 def wave_operation():
@@ -500,8 +553,6 @@ def wave_operation():
     cur_man = data['operator']
     wave_create_time = data['wave_create_time']
 
-
-    # 逻辑处理
     # 获取订单数据
     order_data = server_db.get_order_by_id(order_id)
     if not order_data:
@@ -525,8 +576,6 @@ def wave_operation():
 
     order_trace = order_data['order_trace'] if order_data['order_trace'] else ''
 
-
-
     new_order_trace = f"{order_trace}\n\n拣货人：{cur_man}，{operation}波次{data['wave_id']}时间：{formatted_time}"
     cur_status = '拣货'
 
@@ -537,9 +586,10 @@ def wave_operation():
 
     if status == 1:
         # server_feishu.update_feishu_async()
-        thread = threading.Thread(target=call_remote_update_service_async, args=(wave_id, wave_create_time, timestamp_ms,
-                                                                                 cur_man,cur_status, jianhuo_order_trace,
-                                                                                 order_id,))
+        thread = threading.Thread(target=call_remote_update_service_async,
+                                  args=(wave_id, wave_create_time, timestamp_ms,
+                                        cur_man, cur_status, jianhuo_order_trace,
+                                        order_id,))
         thread.start()
 
         print("start update wave in feishu " + str(wave_id) + " " + str(order_id))
@@ -609,6 +659,8 @@ app.add_url_rule('/sync3', 'sync3', sync_data3, methods=['GET'])
 app.add_url_rule('/local/orders', 'local_orders', local_orders, methods=['GET'])
 
 app.add_url_rule('/wave/operation', 'wave_operation', wave_operation, methods=['POST'])
+
+app.add_url_rule('/order/operation', 'order_operation', order_operation_by_wave, methods=['POST'])
 
 app.add_url_rule('/wave/orders', 'wave_address_orders', wave_address_orders, methods=['POST'])
 

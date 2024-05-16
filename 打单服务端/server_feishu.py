@@ -17,7 +17,7 @@ def get_tenant_access_token(app_id, app_secret):
     return r.json()["tenant_access_token"]
 
 
-def update_feishu_async(wave_id, wave_create_time, cur_time, cur_man, cur_process, order_trace, order_id):
+def update_feishu_wave_async(wave_id, wave_create_time, cur_time, cur_man, cur_process, order_trace, order_id):
     ids_batch = [order_id]
     response_data = read_records_by_order_ids(ids_batch)
     if response_data['code'] == 0:
@@ -40,12 +40,33 @@ def update_feishu_async(wave_id, wave_create_time, cur_time, cur_man, cur_proces
 
             }
             app.logger.info("update_feishu_async wave request data %s", record_data)
-            response = do_update_wave(record_data, record_id)
+            response = do_update_order(record_data, record_id)
+            app.logger.info("update_feishu_async wave response data %s", response)
+            print(response)
+
+def update_feishu_order_async(cur_time, cur_man, cur_process, order_trace, order_id):
+    ids_batch = [order_id]
+    response_data = read_records_by_order_ids(ids_batch)
+    if response_data['code'] == 0:
+        # 若成功获取响应，遍历 response_data 获取每个订单ID的存在性
+        for item in response_data['data']['items']:
+            record_id = item['record_id']
+            record_data = {
+                "fields": {
+                    "当前处理人": cur_man,
+                    "当前处理时间": cur_time,
+                    "当前进度": cur_process,
+                    "总体进度": order_trace,
+                }
+
+            }
+            app.logger.info("update_feishu_async wave request data %s", record_data)
+            response = do_update_order(record_data, record_id)
             app.logger.info("update_feishu_async wave response data %s", response)
             print(response)
 
 
-def do_update_wave(record_data, record_id):
+def do_update_order(record_data, record_id):
     app_id = "cli_a57140de9afb5013"
     app_secret = "tFYILUQVlsT7U4jDctg7VdwZWIMZYXbs"
     tenant_access_token = get_tenant_access_token(app_id, app_secret)
