@@ -514,10 +514,58 @@ def call_remote_update_order_service_async(cur_time, cur_man, cur_status, local_
                                                             order_id)
 
 
+def order_operation2():
+    data = request.get_json()
+    order_id = data['order_id']
+    cur_man = data['operator']
+    # type 配货100 对接200
+    operate_type = data['type']
+
+    if order_id <= 0:
+        return jsonify({'code': 1, 'msg': '非有效订单号'}), 400
+
+    current_timestamp = time.time()
+    timestamp_ms = int(current_timestamp * 1000)
+
+    # 将时间戳转换为本地时间的 struct_time 对象
+    local_time = time.localtime(current_timestamp)
+    formatted_time = time.strftime("%Y-%m-%d %H:%M:%S", local_time)
+
+    # 逻辑处理
+    # 获取订单数据
+    order_data = server_db.get_order_by_id(order_id)
+    # 获取订单数据
+    if order_data:
+        print(order_data)
+        if operate_type == 100:
+            local_order_trace = f"配货人：{cur_man}，配货时间：{formatted_time}"
+            status = "配货"
+        elif operate_type == 200:
+            local_order_trace = f"对接人：{cur_man}，对接时间：{formatted_time}"
+            status = "对接"
+        else:
+            local_order_trace = f"服务人：{cur_man}，服务时间：{formatted_time}"
+            status = "服务"
+
+        app.logger.info(f"update order id {order_id}, cur_man is {cur_man}, status is{status}, "
+                        f"local_order_trace is {local_order_trace} ")
+
+        thread = threading.Thread(target=call_remote_update_order_service_async,
+                                  args=(timestamp_ms, cur_man, status, local_order_trace,
+                                        order_data['order_id'],))
+        thread.start()
+        return jsonify({'code': 0, 'msg': '更新成功'}), 200
+    else:
+        return jsonify({'code': 1, 'msg': '订单不存在'}), 400
+
+
 def order_operation_by_wave():
     data = request.get_json()
     wave_id = data['wave_id']
     cur_man = data['operator']
+
+    if wave_id <= 0:
+        return jsonify({'code': 1, 'msg': '未拣货'}), 400
 
     current_timestamp = time.time()
     timestamp_ms = int(current_timestamp * 1000)
@@ -536,7 +584,6 @@ def order_operation_by_wave():
         for wave_id, orders in order_data.items():
             print(orders)
             for order in orders:
-
                 local_order_trace = f"送货人：{cur_man}，送货时间：{formatted_time}"
                 call_remote_update_order_service_async(timestamp_ms, cur_man, "送货", local_order_trace,
                                                        order['order_id'])
@@ -661,6 +708,8 @@ app.add_url_rule('/local/orders', 'local_orders', local_orders, methods=['GET'])
 app.add_url_rule('/wave/operation', 'wave_operation', wave_operation, methods=['POST'])
 
 app.add_url_rule('/order/operation', 'order_operation', order_operation_by_wave, methods=['POST'])
+
+app.add_url_rule('/order/operation2', 'order_operation2', order_operation2, methods=['POST'])
 
 app.add_url_rule('/wave/orders', 'wave_address_orders', wave_address_orders, methods=['POST'])
 
