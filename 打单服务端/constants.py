@@ -12,6 +12,7 @@ PICK = "配货"
 DELIVERY = "送货"
 COORDINAT = "对接"
 RECEIVE = "对接收货"
+JIANHUO = "拣货"
 
 # 远程数据已被删除
 REMOTE_DATA_HAS_DELETED = 100
