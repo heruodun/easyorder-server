@@ -230,7 +230,7 @@ def process_orders(db, orders):
 
         # 创建时间超过一定的天数订单且状态是送货中 从远程删除掉
         if is_timestamp_older_than_x_days(creation_time, constants.DONE_DELETE_DATA_DAY):
-            if (cur_status == constants.DELIVERY) or (cur_status == constants.RECEIVE):
+            if (cur_status == constants.DELIVERY) or (cur_status == constants.RECEIVE) or (cur_status == constants.JIANHUO):
                 status = constants.REMOTE_DATA_TO_BE_DELETE
 
         if is_timestamp_older_than_x_days(creation_time, constants.ALL_DELETE_DATA_DAY):
