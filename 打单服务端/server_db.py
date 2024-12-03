@@ -86,6 +86,47 @@ def get_orders(limit, offset):
     return result
 
 
+def get_orders_by_keyword(limit, offset, keyword):
+    # 计算分页
+    # 将关键字用百分号包裹
+    keyword = f"%{keyword}%"
+    
+    query = """
+        SELECT id, order_id, address, content, cur_status, cur_man, cur_time, printer, print_time, order_trace, update_time, sync_status, wave_id
+        FROM orders WHERE address LIKE ?
+        ORDER BY id DESC
+        LIMIT ? OFFSET ?
+    """
+    
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute(query, (keyword, limit, offset))
+    
+    # 取出查询结果
+    orders = cursor.fetchall()
+    
+    # 格式化输出结果
+    result = []
+    for order in orders:
+        result.append({
+            'id': order[0],
+            'order_id': order[1],
+            'address': order[2],
+            'content': order[3],
+            'cur_status': order[4],
+            'cur_man': order[5],
+            'cur_time': order[6],
+            'printer': order[7],
+            'print_time': order[8],
+            'order_trace': order[9],
+            'update_time': order[10],
+            'sync_status': order[11],
+        })
+    
+    return result
+
+
+
 def query_addresses_by_ids(ids=None):
     query = """
         SELECT id, place, coordinate

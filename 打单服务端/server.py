@@ -592,6 +592,17 @@ def order_operation_by_wave():
         return jsonify({'code': 1, 'msg': '订单不存在'}), 400
 
 
+def order_search():
+    data = request.get_json()
+    keyword = data['keyword']
+    limit = data['limit']
+    offset = data['offset']
+    # 获取订单数据
+    order_data = server_db.get_orders_by_keyword(limit, offset, keyword)
+    # 响应请求
+    return jsonify({'orders': order_data}), 200
+
+
 def wave_operation():
     data = request.get_json()
     wave_id = data['wave_id']
@@ -711,6 +722,8 @@ app.add_url_rule('/order/operation', 'order_operation', order_operation_by_wave,
 
 app.add_url_rule('/order/operation2', 'order_operation2', order_operation2, methods=['POST'])
 
+app.add_url_rule('/order/search', 'order_search', order_search, methods=['POST'])
+
 app.add_url_rule('/wave/orders', 'wave_address_orders', wave_address_orders, methods=['POST'])
 
 # 获取地址信息列表 多了经纬度
@@ -749,21 +762,21 @@ def scheduled_job3_update_local_addresses_job():
         server_schedule.scheduled_job3_update_local_addresses_job(db)
 
 
-def init_job():
-    # 初始化定时任务
-    scheduler = BackgroundScheduler()
-    # 每天凌晨2点执行
-    scheduler.add_job(scheduled_job2_14_d_remote_job, 'cron', hour=2, minute=0)
-    # 每隔5分钟一次
-    scheduler.add_job(scheduled_job1_30_d_local, 'interval', minutes=2)
-    # 每隔3分钟一次
-    scheduler.add_job(scheduled_job3_update_local_addresses_job, 'interval', minutes=3)
-    scheduler.start()
+# def init_job():
+#     # 初始化定时任务
+#     scheduler = BackgroundScheduler()
+#     # 每天凌晨2点执行
+#     scheduler.add_job(scheduled_job2_14_d_remote_job, 'cron', hour=2, minute=0)
+#     # 每隔5分钟一次
+#     scheduler.add_job(scheduled_job1_30_d_local, 'interval', minutes=2)
+#     # 每隔3分钟一次
+#     scheduler.add_job(scheduled_job3_update_local_addresses_job, 'interval', minutes=3)
+#     scheduler.start()
 
 
 def start_flask_app():
     # 在应用启动时立即初始化数据库（通过访问/initdb路由）
-    init_job()
+    # init_job()
     init_logger()
     app.run(host='0.0.0.0', port=5000, threaded=True, use_reloader=False)
 
