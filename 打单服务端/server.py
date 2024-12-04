@@ -87,8 +87,11 @@ def before_request_logging():
 # 记录所有响应的信息（可选）
 @app.after_request
 def after_request_logging(response):
-    app.logger.info("Sending response: %s - %s", response.status, response.data)
+    # 检查响应状态码
+    if response.status_code not in (200, 201):
+        app.logger.info("Sending response: %s - %s", response.status, response.data)
     return response
+
 
 
 def index():
