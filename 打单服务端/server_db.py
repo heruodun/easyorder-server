@@ -20,18 +20,42 @@ def get_db():
 def insert_record(db, data):
     cur = db.cursor()
     cur.execute('''INSERT INTO orders (
- address, content, cur_status, printer, print_time,
+ address, content, cur_status, printer, print_time, cur_man, cur_time,
  order_trace, sync_status
- ) VALUES (?,?,?, ?, ?, ?, ?)''', (
+ ) VALUES (?,?,?, ?, ?, ?, ?, ?, ?)''', (
         data.get('address'),
         data.get('content'),
         '打单',
+        data.get('printer'),
+        data.get('print_time'),
         data.get('printer'),
         data.get('print_time'),
         data.get('order_trace'),
         constants.LOCAL_DATA_INIT
     ))
     return cur.lastrowid
+
+
+def get_orders_count_by_keyword(keyword):
+    # 将关键字用百分号包裹
+    keyword = f"%{keyword}%"
+
+    query = """
+        SELECT count(*)
+        FROM orders
+        WHERE address LIKE ?
+    """
+
+    db = get_db()
+    cursor = db.cursor()
+
+    # 执行查询
+    cursor.execute(query, (keyword,))
+
+    # 取出结果
+    result = cursor.fetchone()[0]  # 取出第一行第一列的值，即计数
+
+    return result
 
 
 def generate_and_update_order_id(db, record_id):
@@ -90,21 +114,21 @@ def get_orders_by_keyword(limit, offset, keyword):
     # 计算分页
     # 将关键字用百分号包裹
     keyword = f"%{keyword}%"
-    
+
     query = """
         SELECT id, order_id, address, content, cur_status, cur_man, cur_time, printer, print_time, order_trace, update_time, sync_status, wave_id
         FROM orders WHERE address LIKE ?
         ORDER BY id DESC
         LIMIT ? OFFSET ?
     """
-    
+
     db = get_db()
     cursor = db.cursor()
     cursor.execute(query, (keyword, limit, offset))
-    
+
     # 取出查询结果
     orders = cursor.fetchall()
-    
+
     # 格式化输出结果
     result = []
     for order in orders:
@@ -122,9 +146,8 @@ def get_orders_by_keyword(limit, offset, keyword):
             'update_time': order[10],
             'sync_status': order[11],
         })
-    
-    return result
 
+    return result
 
 
 def query_addresses_by_ids(ids=None):
@@ -392,6 +415,7 @@ def update_order_wave(wave_id, cur_status, cur_time, cur_man, order_trace, order
         # 没有行被更新，可能是因为指定的order_id不存在
         return -1
 
+
 def update_local_order(cur_status, cur_time, cur_man, order_trace, order_id):
     db = get_db()
     cur = db.cursor()
@@ -424,7 +448,6 @@ def update_local_order(cur_status, cur_time, cur_man, order_trace, order_id):
     else:
         # 没有行被更新，可能是因为指定的order_id不存在
         return -1
-
 
 
 def init_db():

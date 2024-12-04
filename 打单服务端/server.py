@@ -294,33 +294,6 @@ def save_one_order(data):
         order_id = server_db.generate_and_update_order_id(db, record_id)
         db.commit()
 
-        new_record_data = {
-            "fields": {
-                "订单编号": order_id,
-                "编号": record_id,
-                "地址": data["address"],
-                "货物": data["content"],
-                "打单时间": timestamp_ms,
-                "打单人": data["printer"],
-                "当前进度": constants.PRINT,
-                "当前处理人": data["printer"],
-                "当前处理时间": timestamp_ms,
-                "总体进度": "打单人：" + data["printer"] + "，打单时间：" + formatted_time
-            }
-        }
-
-        new_msg_data = {
-            "order_id": order_id,
-            "id": record_id,
-            "address": data["address"],
-            "content": data["content"],
-            "cur_progress": constants.PRINT,
-            "cur_man": data["printer"],
-            "cur_time": formatted_time
-        }
-        thread = threading.Thread(target=call_remote_service_async, args=(new_record_data, new_msg_data, order_id,))
-        thread.start()
-
         return jsonify({
             "status": "Order added and updated",
             "record_id": record_id,
@@ -428,46 +401,11 @@ def init_db():
     return "Database initialized."
 
 
-def login():
-    phone = request.args.get('phone')
-    password = request.args.get('password')
-    if not phone:
-        return jsonify({"error": "Missing 'phone' in query parameters"}), 400
-    if not password:
-        return jsonify({"error": "Missing 'password' in query parameters"}), 400
-
-    code, name = server_feishu.read_users(phone, password)
-
-    if code == 0:
-        if name is not None:
-            return name, 200
-        else:
-            return jsonify({"error": "user not found"}), 404
-    else:
-        return jsonify({"error": "user not found"}), 500
-
-
-def sync_data1():
-    scheduled_job1_30_d_local()
-    return jsonify({"scheduled_job1_30_d_local run": "ok"}), 200
-
-
-def sync_data2():
-    scheduled_job2_14_d_remote_job()
-    return jsonify({"scheduled_job2_14_d_remote_job run": "ok"}), 200
-
-
-def sync_data3():
-    scheduled_job3_update_local_addresses_job()
-    return jsonify({"scheduled_job3_2_min_update_local_addresses_job run": "ok"}), 200
-
-
 @app.errorhandler(Exception)
 def handle_exception(e):
     # 对错误进行记录
     app.logger.error('%s', (e))
     # 通知报警系统
-    send_notification('An error occurred: {}'.format(str(e)))
     return 'An internal error occurred.', 500
 
 
@@ -475,43 +413,12 @@ def send_notification(err_message):
     server_feishu.send_one_alert_message('Application Error Alert' + err_message)
 
 
-def call_remote_update_service_async(wave_id, wave_create_time, cur_time, cur_man, cur_status, jianhuo_order_trace,
-                                     order_id):
-    ids_batch = [order_id]
-    response_data = server_feishu.read_records_by_order_ids(ids_batch)
-    if response_data['code'] == 0:
-        # 若成功获取响应，遍历 response_data 获取每个订单ID的存在性
-        for order in response_data['data']['items']:
-            order_trace = order["fields"]["总体进度"][0]["text"]
-            new_order_trace = f"{order_trace}\n\n{jianhuo_order_trace}"
-            with app.app_context():
-                db = server_db.get_db()
-                ok = server_db.update_order_trace(db, new_order_trace, order_id)
-                if ok:
-                    server_feishu.update_feishu_wave_async(wave_id, wave_create_time, cur_time, cur_man, cur_status,
-                                                           new_order_trace,
-                                                           order_id)
-
-
-def call_remote_update_order_service_async(cur_time, cur_man, cur_status, local_order_trace, order_id):
-    ids_batch = [order_id]
-    print(ids_batch)
-    response_data = server_feishu.read_records_by_order_ids(ids_batch)
-    print("call_remote_update_order_service_async ")
-    if response_data['code'] == 0:
-        print("response_data = 0 ")
-        # 若成功获取响应，遍历 response_data 获取每个订单ID的存在性
-        for order in response_data['data']['items']:
-            order_trace = order["fields"]["总体进度"][0]["text"]
-            new_order_trace = f"{order_trace}\n\n{local_order_trace}"
-            print("response_data = 0 " + new_order_trace)
-            with app.app_context():
-                db = server_db.get_db()
-                ok = server_db.update_order_trace(db, new_order_trace, order_id)
-                if ok:
-                    print("update_feishu_order_async ")
-                    server_feishu.update_feishu_order_async(cur_time, cur_man, cur_status, new_order_trace,
-                                                            order_id)
+def call_remote_update_order_service_async(cur_time, cur_man, cur_status, local_order_trace, old_order_trace, order_id):
+    new_order_trace = f"{old_order_trace}\n\n{local_order_trace}"
+    print("response_data = 0 " + new_order_trace)
+    with app.app_context():
+        db = server_db.get_db()
+        ok = server_db.update_order(db, cur_status, cur_man, cur_time, new_order_trace, 1, order_id)
 
 
 def order_operation2():
@@ -550,10 +457,13 @@ def order_operation2():
         app.logger.info(f"update order id {order_id}, cur_man is {cur_man}, status is{status}, "
                         f"local_order_trace is {local_order_trace} ")
 
+        old_order_trace = order_data['order_trace']
+
         thread = threading.Thread(target=call_remote_update_order_service_async,
-                                  args=(timestamp_ms, cur_man, status, local_order_trace,
+                                  args=(timestamp_ms, cur_man, status, local_order_trace, old_order_trace,
                                         order_data['order_id'],))
         thread.start()
+
         return jsonify({'code': 0, 'msg': '更新成功'}), 200
     else:
         return jsonify({'code': 1, 'msg': '订单不存在'}), 400
@@ -586,6 +496,7 @@ def order_operation_by_wave():
             for order in orders:
                 local_order_trace = f"送货人：{cur_man}，送货时间：{formatted_time}"
                 call_remote_update_order_service_async(timestamp_ms, cur_man, "送货", local_order_trace,
+                                                       order['order_trace'],
                                                        order['order_id'])
         return jsonify({'code': 0, 'msg': '更新成功'}), 200
     else:
@@ -599,8 +510,9 @@ def order_search():
     offset = data['offset']
     # 获取订单数据
     order_data = server_db.get_orders_by_keyword(limit, offset, keyword)
+    count = server_db.get_orders_count_by_keyword(keyword)
     # 响应请求
-    return jsonify({'orders': order_data}), 200
+    return jsonify({'orders': order_data, 'count': count}), 200
 
 
 def wave_operation():
@@ -640,16 +552,8 @@ def wave_operation():
     # DB操作
     status = server_db.update_order_wave(wave_id, cur_status, timestamp_ms, cur_man, new_order_trace,
                                          order_id)
-    jianhuo_order_trace = f"拣货人：{cur_man}，{operation}波次{data['wave_id']}时间：{formatted_time}"
 
     if status == 1:
-        # server_feishu.update_feishu_async()
-        thread = threading.Thread(target=call_remote_update_service_async,
-                                  args=(wave_id, wave_create_time, timestamp_ms,
-                                        cur_man, cur_status, jianhuo_order_trace,
-                                        order_id,))
-        thread.start()
-
         print("start update wave in feishu " + str(wave_id) + " " + str(order_id))
     else:
         return jsonify({'code': 1, 'msg': '更新失败'}), 500
@@ -706,13 +610,13 @@ app.add_url_rule('/order', 'get_order_by_id', get_order_by_id, methods=['GET'])
 # 初始化数据库
 app.add_url_rule('/initdb', 'init_db', init_db, methods=['GET'])
 # 用户登录
-app.add_url_rule('/login', 'login', login, methods=['GET'])
-
-app.add_url_rule('/sync1', 'sync1', sync_data1, methods=['GET'])
-
-app.add_url_rule('/sync2', 'sync2', sync_data2, methods=['GET'])
-
-app.add_url_rule('/sync3', 'sync3', sync_data3, methods=['GET'])
+# app.add_url_rule('/login', 'login', login, methods=['GET'])
+#
+# app.add_url_rule('/sync1', 'sync1', sync_data1, methods=['GET'])
+#
+# app.add_url_rule('/sync2', 'sync2', sync_data2, methods=['GET'])
+#
+# app.add_url_rule('/sync3', 'sync3', sync_data3, methods=['GET'])
 
 app.add_url_rule('/local/orders', 'local_orders', local_orders, methods=['GET'])
 
@@ -740,38 +644,6 @@ app.add_url_rule('/run/tsp', 'run_tsp', run_tsp, methods=['GET'])
 
 # 注册应用上下文的清理函数
 app.teardown_appcontext(server_db.close_connection)
-
-
-# 30天内本地创建的单子且未被同步到feishu
-def scheduled_job1_30_d_local():
-    with app.app_context():
-        db = server_db.get_db()
-        server_schedule.execute_job_without_transaction(db, constants.JOB_ONE)
-
-
-def scheduled_job2_14_d_remote_job():
-    with app.app_context():
-        db = server_db.get_db()
-        server_schedule.execute_job_without_transaction(db, constants.JOB_TWO)
-
-
-# 2分钟一次更新远程地址到本地
-def scheduled_job3_update_local_addresses_job():
-    with app.app_context():
-        db = server_db.get_db()
-        server_schedule.scheduled_job3_update_local_addresses_job(db)
-
-
-# def init_job():
-#     # 初始化定时任务
-#     scheduler = BackgroundScheduler()
-#     # 每天凌晨2点执行
-#     scheduler.add_job(scheduled_job2_14_d_remote_job, 'cron', hour=2, minute=0)
-#     # 每隔5分钟一次
-#     scheduler.add_job(scheduled_job1_30_d_local, 'interval', minutes=2)
-#     # 每隔3分钟一次
-#     scheduler.add_job(scheduled_job3_update_local_addresses_job, 'interval', minutes=3)
-#     scheduler.start()
 
 
 def start_flask_app():
