@@ -145,6 +145,7 @@ def get_orders_by_keyword(limit, offset, keyword):
             'order_trace': order[9],
             'update_time': order[10],
             'sync_status': order[11],
+            'wave_id': order[12],
         })
 
     return result
