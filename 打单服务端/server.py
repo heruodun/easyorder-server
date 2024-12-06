@@ -93,7 +93,6 @@ def after_request_logging(response):
     return response
 
 
-
 def index():
     # 使用HTML的<style>来设置文本样式
     return '''
@@ -518,6 +517,18 @@ def order_search():
     return jsonify({'orders': order_data, 'count': count}), 200
 
 
+def order_search2():
+    data = request.get_json()
+    keyword = data['keyword']
+    limit = data['limit']
+    offset = data['offset']
+    # 获取订单数据
+    order_data = server_db.get_orders_by_keyword2(limit, offset, keyword)
+    count = server_db.get_orders_count_by_keyword2(keyword)
+    # 响应请求
+    return jsonify({'orders': order_data, 'count': count}), 200
+
+
 def wave_operation():
     data = request.get_json()
     wave_id = data['wave_id']
@@ -630,6 +641,8 @@ app.add_url_rule('/order/operation', 'order_operation', order_operation_by_wave,
 app.add_url_rule('/order/operation2', 'order_operation2', order_operation2, methods=['POST'])
 
 app.add_url_rule('/order/search', 'order_search', order_search, methods=['POST'])
+
+app.add_url_rule('/order/search2', 'order_search2', order_search2, methods=['POST'])
 
 app.add_url_rule('/wave/orders', 'wave_address_orders', wave_address_orders, methods=['POST'])
 
